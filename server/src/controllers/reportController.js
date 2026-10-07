@@ -1,0 +1,188 @@
+const db = require('../config/database');
+
+function getRecapReport(req, res) {
+  try {
+    const { period = 'daily', date, startDate, endDate } = req.query;
+
+    // Resolve date boundary (defaults to targetDate or current date)
+    const targetDate = date || new Date().toISOString().split('T')[0];
+
+    let whereClause = '';
+    let params = [];
+
+    if (startDate && endDate) {
+      whereClause = `WHERE DATE(p.created_at) BETWEEN DATE(?) AND DATE(?)`;
+      params = [startDate, endDate];
+    } else if (period === 'daily') {
+      whereClause = `WHERE DATE(p.created_at) = DATE(?)`;
+      params = [targetDate];
+    } else if (period === 'weekly') {
+      // 7 days ending on targetDate
+      whereClause = `WHERE DATE(p.created_at) BETWEEN DATE(?, '-6 days') AND DATE(?)`;
+      params = [targetDate, targetDate];
+    } else if (period === 'monthly') {
+      // Month of targetDate
+      whereClause = `WHERE strftime('%Y-%m', p.created_at) = strftime('%Y-%m', ?)`;
+      params = [targetDate];
+    } else if (period === 'all') {
+      whereClause = ``;
+      params = [];
+    } else {
+      whereClause = `WHERE DATE(p.created_at) = DATE(?)`;
+      params = [targetDate];
+    }
+
+    // 1. Prescription summary
+    const rxSummary = db.prepare(`
+      SELECT 
+        COUNT(*) as total_prescriptions,
+        SUM(CASE WHEN p.status = 'completed' THEN 1 ELSE 0 END) as completed_count,
+        SUM(CASE WHEN p.status = 'preparing' THEN 1 ELSE 0 END) as preparing_count,
+        SUM(CASE WHEN p.status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+        SUM(CASE WHEN p.status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count,
+        SUM(CASE WHEN p.is_cito = 1 THEN 1 ELSE 0 END) as cito_count
+      FROM prescriptions p
+      ${whereClause}
+    `).get(...params);
+
+    // 2. Prescription details with patient and doctor info
+    const prescriptions = db.prepare(`
+      SELECT 
+        p.id,
+        p.prescription_code,
+        p.status,
+        p.is_cito,
+        p.notes,
+        p.created_at,
+        pat.name as patient_name,
+        pat.medical_record_number,
+        u.name as doctor_name,
+        (SELECT COUNT(*) FROM prescription_items pi WHERE pi.prescription_id = p.id) as item_count,
+        (SELECT GROUP_CONCAT(m.name || ' (' || pi.quantity_input || ' ' || pi.unit_selected || ')', ', ')
+         FROM prescription_items pi 
+         JOIN medicines m ON pi.medicine_id = m.id
+         WHERE pi.prescription_id = p.id) as medicines_summary
+      FROM prescriptions p
+      LEFT JOIN patients pat ON p.patient_id = pat.id
+      LEFT JOIN users u ON p.doctor_id = u.id
+      ${whereClause}
+      ORDER BY p.created_at DESC
+    `).all(...params);
+
+    // 3. Top dispensed / prescribed medicines in the period
+    let itemWhereClause = '';
+    let itemParams = [];
+    if (startDate && endDate) {
+      itemWhereClause = `WHERE DATE(p.created_at) BETWEEN DATE(?) AND DATE(?)`;
+      itemParams = [startDate, endDate];
+    } else if (period === 'daily') {
+      itemWhereClause = `WHERE DATE(p.created_at) = DATE(?)`;
+      itemParams = [targetDate];
+    } else if (period === 'weekly') {
+      itemWhereClause = `WHERE DATE(p.created_at) BETWEEN DATE(?, '-6 days') AND DATE(?)`;
+      itemParams = [targetDate, targetDate];
+    } else if (period === 'monthly') {
+      itemWhereClause = `WHERE strftime('%Y-%m', p.created_at) = strftime('%Y-%m', ?)`;
+      itemParams = [targetDate];
+    }
+
+    const topMedicines = db.prepare(`
+      SELECT 
+        m.id,
+        m.code as medicine_code,
+        m.name as medicine_name,
+        m.category,
+        m.base_unit,
+        COUNT(pi.id) as prescription_frequency,
+        COALESCE(SUM(pi.quantity_base_unit), 0) as total_quantity_base
+      FROM prescription_items pi
+      JOIN prescriptions p ON pi.prescription_id = p.id
+      JOIN medicines m ON pi.medicine_id = m.id
+      ${itemWhereClause}
+      GROUP BY m.id
+      ORDER BY total_quantity_base DESC
+      LIMIT 10
+    `).all(...itemParams);
+
+    // 4. Daily trends inside the selected range
+    const dailyTrends = db.prepare(`
+      SELECT 
+        DATE(p.created_at) as date,
+        COUNT(*) as total,
+        SUM(CASE WHEN p.status = 'completed' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN p.is_cito = 1 THEN 1 ELSE 0 END) as cito
+      FROM prescriptions p
+      ${whereClause}
+      GROUP BY DATE(p.created_at)
+      ORDER BY date ASC
+    `).all(...params);
+
+    // 5. Stock adjustments summary in the same period
+    let adjWhereClause = '';
+    let adjParams = [];
+    if (startDate && endDate) {
+      adjWhereClause = `WHERE DATE(created_at) BETWEEN DATE(?) AND DATE(?)`;
+      adjParams = [startDate, endDate];
+    } else if (period === 'daily') {
+      adjWhereClause = `WHERE DATE(created_at) = DATE(?)`;
+      adjParams = [targetDate];
+    } else if (period === 'weekly') {
+      adjWhereClause = `WHERE DATE(created_at) BETWEEN DATE(?, '-6 days') AND DATE(?)`;
+      adjParams = [targetDate, targetDate];
+    } else if (period === 'monthly') {
+      adjWhereClause = `WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', ?)`;
+      adjParams = [targetDate];
+    }
+
+    const adjustmentSummary = db.prepare(`
+      SELECT 
+        COUNT(*) as total_adjustments,
+        COALESCE(SUM(quantity_base_unit), 0) as total_adjusted_units,
+        SUM(CASE WHEN adjustment_type = 'retur_supplier' THEN 1 ELSE 0 END) as retur_count,
+        SUM(CASE WHEN adjustment_type = 'damaged' THEN 1 ELSE 0 END) as damaged_count,
+        SUM(CASE WHEN adjustment_type = 'expired_disposal' THEN 1 ELSE 0 END) as expired_count
+      FROM stock_adjustments
+      ${adjWhereClause}
+    `).get(...adjParams);
+
+    const totalRx = rxSummary?.total_prescriptions || 0;
+    const completedRx = rxSummary?.completed_count || 0;
+    const completionRate = totalRx > 0 ? Math.round((completedRx / totalRx) * 100) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        period,
+        targetDate,
+        dateRange: {
+          startDate: startDate || (period === 'weekly' ? `${targetDate} (7 hari)` : targetDate),
+          endDate: endDate || targetDate
+        },
+        metrics: {
+          totalPrescriptions: totalRx,
+          completedPrescriptions: completedRx,
+          preparingPrescriptions: rxSummary?.preparing_count || 0,
+          pendingPrescriptions: rxSummary?.pending_count || 0,
+          cancelledPrescriptions: rxSummary?.cancelled_count || 0,
+          citoPrescriptions: rxSummary?.cito_count || 0,
+          completionRate,
+          totalAdjustments: adjustmentSummary?.total_adjustments || 0,
+          totalAdjustedUnits: adjustmentSummary?.total_adjusted_units || 0,
+          returCount: adjustmentSummary?.retur_count || 0,
+          damagedCount: adjustmentSummary?.damaged_count || 0,
+          expiredCount: adjustmentSummary?.expired_count || 0
+        },
+        topMedicines,
+        dailyTrends,
+        prescriptions
+      }
+    });
+  } catch (error) {
+    console.error('getRecapReport error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+module.exports = {
+  getRecapReport
+};

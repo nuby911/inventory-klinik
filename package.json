@@ -1,0 +1,14 @@
+{
+  "name": "klinik_almedika",
+  "version": "1.1.0",
+  "description": "Klinik Almedika SIM Farmasi & Rawat Jalan Terpadu (FEFO & E-Resep)",
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue,teal\" \"npm run server\" \"npm run client\"",
+    "server": "cd server && node src/server.js",
+    "client": "cd client && npm run dev",
+    "build": "cd client && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
