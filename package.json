@@ -6,7 +6,9 @@
     "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue,teal\" \"npm run server\" \"npm run client\"",
     "server": "cd server && node src/server.js",
     "client": "cd client && npm run dev",
-    "build": "cd client && npm run build"
+    "build": "cd client && npm run build",
+    "test": "npm run test --prefix server",
+    "lint": "npm run lint --prefix client"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

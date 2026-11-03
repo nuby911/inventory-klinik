@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-
-const SocketContext = createContext(null);
+import { SocketContext } from './socketContextDef';
 
 export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null);
@@ -9,24 +8,31 @@ export function SocketProvider({ children }) {
   const [incomingAlert, setIncomingAlert] = useState(null);
 
   useEffect(() => {
-    // Connect to current host / proxy
-    const socketInstance = io(window.location.origin, {
+    const saved = sessionStorage.getItem('almedika_user') || localStorage.getItem('almedika_user');
+    let token = null;
+    try {
+      token = saved ? JSON.parse(saved)?.token : null;
+    } catch {}
+
+    // Connect directly to backend port 5000
+    const socketUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
+
+    const socketInstance = io(socketUrl, {
       transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
+      auth: { token }
     });
 
     socketInstance.on('connect', () => {
-      console.log('Socket.io connected:', socketInstance.id);
       setIsConnected(true);
+      setSocket(socketInstance);
     });
 
     socketInstance.on('disconnect', () => {
-      console.log('Socket.io disconnected');
       setIsConnected(false);
     });
 
     socketInstance.on('prescription:new', (newRx) => {
-      console.log('Real-time prescription received:', newRx);
       setIncomingAlert({
         type: 'prescription:new',
         title: newRx.is_cito ? '🚨 RESEP CITO MASUK!' : '📋 E-Resep Baru Diterima',
@@ -37,26 +43,29 @@ export function SocketProvider({ children }) {
 
       // Play soft notification beep using Web Audio API (no external file needed)
       try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = newRx.is_cito ? 'sawtooth' : 'sine';
-        osc.frequency.setValueAtTime(newRx.is_cito ? 880 : 587.33, audioCtx.currentTime); // A5 or D5
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.6);
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const audioCtx = new AudioCtx();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = newRx.is_cito ? 'sawtooth' : 'sine';
+          osc.frequency.setValueAtTime(newRx.is_cito ? 880 : 587.33, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.6);
+        }
       } catch (e) {
         console.log('Audio context play failed:', e);
       }
     });
 
-    setSocket(socketInstance);
-
     return () => {
       socketInstance.disconnect();
+      setSocket(null);
+      setIsConnected(false);
     };
   }, []);
 
@@ -65,8 +74,4 @@ export function SocketProvider({ children }) {
       {children}
     </SocketContext.Provider>
   );
-}
-
-export function useSocket() {
-  return useContext(SocketContext);
 }

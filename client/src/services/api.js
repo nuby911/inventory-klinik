@@ -107,55 +107,12 @@ export const api = {
     return request(`/patients${query ? `?${query}` : ''}`);
   },
   getPatientById: (id) => request(`/patients/${id}`),
+  createPatient: (payload) => request('/patients', { method: 'POST', body: JSON.stringify(payload) }),
   getUsers: () => request('/users'),
   login: async (credentials) => {
-    try {
-      return await request('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(credentials)
-      });
-    } catch {
-      // Fallback: verify against live database users endpoint
-      const usersRes = await request('/users');
-      const users = usersRes.data || [];
-      const user = users.find(u => 
-        (credentials.email && u.email.toLowerCase() === credentials.email.trim().toLowerCase()) ||
-        (credentials.role && u.role === credentials.role.toLowerCase())
-      );
-
-      if (!user) {
-        throw new Error('Akun pengguna tidak ditemukan di database.');
-      }
-
-      if (credentials.role && user.role !== credentials.role.toLowerCase()) {
-        throw new Error(`Akses Ditolak: Akun '${user.name}' adalah '${user.role.toUpperCase()}'. Anda tidak diizinkan masuk ke portal '${credentials.role.toUpperCase()}'.`);
-      }
-
-      let title = 'Staff Klinik';
-      let badgeColor = 'bg-blue-100 text-blue-800 border-blue-300';
-      if (user.role === 'dokter') {
-        title = 'Dokter Spesialis Rawat Jalan';
-        badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
-      } else if (user.role === 'apoteker') {
-        title = 'Kepala Instalasi Farmasi (FEFO)';
-        badgeColor = 'bg-teal-100 text-teal-800 border-teal-300';
-      } else if (user.role === 'admin') {
-        title = 'Staff Logistik & Pengelolaan Stok';
-        badgeColor = 'bg-blue-100 text-blue-800 border-blue-300';
-      }
-
-      return {
-        success: true,
-        data: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          title,
-          badgeColor,
-          token: `token_${user.id}_${Date.now()}`
-        }
-      };
-    }
+    return await request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials)
+    });
   }
 };

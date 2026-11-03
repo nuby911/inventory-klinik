@@ -6,13 +6,46 @@ import {
   Menu, 
   LogOut
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/useAuth';
+import { useSocket } from '../../context/useSocket';
 
-export default function TopBar({ activeSubTab, onToggleMobile }) {
+export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }) {
   const { currentUser, logout } = useAuth();
   const { incomingAlert, setIncomingAlert } = useSocket();
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+
+  const roleShortcuts = {
+    dokter: [
+      { id: 'dashboard', label: 'Dashboard Operasional', desc: 'Ringkasan antrean dan stok' },
+      { id: 'write_prescription', label: 'Tulis E-Resep', desc: 'Resep standar & racikan puyer' },
+      { id: 'prescription_history', label: 'Riwayat Resep', desc: 'Daftar resep yang telah dibuat' },
+      { id: 'medicine_catalog', label: 'Katalog Obat', desc: 'Daftar sediaan dan stok obat klinik' },
+      { id: 'reports', label: 'Laporan Rekapitulasi', desc: 'Rekap harian, mingguan, bulanan' }
+    ],
+    apoteker: [
+      { id: 'dashboard', label: 'Dashboard Operasional', desc: 'Ringkasan antrean dan peringatan ED' },
+      { id: 'queue_dispensing', label: 'Antrean Farmasi FEFO', desc: 'Verifikasi 5 benar & dispensing batch' },
+      { id: 'expiry_monitoring', label: 'Monitoring Kadaluwarsa', desc: 'Batch < 60 hari & stok kritis' },
+      { id: 'damage_report', label: 'Laporan Obat Rusak', desc: 'Pencatatan obat pecah/rusak' },
+      { id: 'dispensed_history', label: 'Riwayat Penyerahan', desc: 'Daftar obat yang telah diserahkan' },
+      { id: 'reports', label: 'Laporan Rekapitulasi', desc: 'Rekapitulasi farmasi periodik' }
+    ],
+    admin: [
+      { id: 'dashboard', label: 'Dashboard Operasional', desc: 'Ringkasan inventori dan stok' },
+      { id: 'inventory_master', label: 'Master Obat & Satuan', desc: 'Katalog obat, multi-satuan & barcode' },
+      { id: 'restock_batches', label: 'Penerimaan Batch (Restock)', desc: 'Penerimaan barang dari PBF' },
+      { id: 'returns_audit', label: 'Retur PBF & Audit', desc: 'Pengembalian supplier dan log opname' },
+      { id: 'logistics_overview', label: 'Tata Letak Rak', desc: 'Posisi rak penyimpanan fisik' },
+      { id: 'reports', label: 'Laporan Rekapitulasi', desc: 'Rekapitulasi logistik dan peresepan' }
+    ]
+  };
+
+  const matchingShortcuts = (roleShortcuts[currentUser?.role] || []).filter(item => {
+    if (!searchQuery.trim()) return false;
+    const q = searchQuery.toLowerCase();
+    return item.label.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
+  });
 
   const getSubTabInfo = () => {
     switch (activeSubTab) {
@@ -113,21 +146,21 @@ export default function TopBar({ activeSubTab, onToggleMobile }) {
   const info = getSubTabInfo();
 
   return (
-    <div className="bg-gradient-to-r from-[#1c8bb7] via-[#2497c3] to-[#2b9eca] text-white shadow-xs transition-all border-b border-white/20">
+    <div className="bg-gradient-to-r from-[#091f36] via-[#0f3d6b] to-[#155ea3] text-white shadow-sm transition-all border-b border-white/15">
       {/* CITO Alert Banner (If Any) */}
       {incomingAlert && (
-        <div className={`px-6 py-2 flex items-center justify-between text-xs font-semibold ${
-          incomingAlert.isCito ? 'bg-rose-600 text-white animate-pulse' : 'bg-[#030879] text-white'
+        <div className={`px-6 py-2.5 flex items-center justify-between text-xs font-semibold ${
+          incomingAlert.isCito ? 'bg-[#ec1415] text-white animate-pulse shadow-md' : 'bg-[#091f36] text-white'
         }`}>
           <div className="flex items-center gap-2">
-            <span className="font-extrabold uppercase tracking-wide">
+            <span className="font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded">
               {incomingAlert.title}:
             </span>
             <span>{incomingAlert.message}</span>
           </div>
           <button 
             onClick={() => setIncomingAlert(null)} 
-            className="text-white/80 hover:text-white px-2 py-0.5 rounded cursor-pointer"
+            className="text-white/80 hover:text-white px-2 py-0.5 rounded cursor-pointer font-bold"
           >
             ✕
           </button>
@@ -135,7 +168,7 @@ export default function TopBar({ activeSubTab, onToggleMobile }) {
       )}
 
       {/* Top Navbar Row */}
-      <div className="px-6 lg:px-8 py-3.5 flex items-center justify-between border-b border-white/15">
+      <div className="px-6 lg:px-8 py-3.5 flex items-center justify-between border-b border-white/10">
         {/* Left: Mobile Toggle & Search Input */}
         <div className="flex items-center gap-3 flex-1 max-w-md">
           <button
@@ -146,16 +179,46 @@ export default function TopBar({ activeSubTab, onToggleMobile }) {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Pill-shaped Search Box */}
+          {/* Pill-shaped Search Box with Quick Navigation Dropdown */}
           <div className="relative w-full max-w-xs hidden sm:block">
             <Search className="w-3.5 h-3.5 text-white/70 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari fitur, menu, atau pasien..."
-              className="w-full bg-white/20 hover:bg-white/25 focus:bg-white/30 text-white placeholder:text-white/70 text-xs pl-9 pr-4 py-1.5 rounded-full border border-white/25 focus:outline-hidden focus:ring-2 focus:ring-white/50 transition font-medium"
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSearchDropdown(true);
+              }}
+              onFocus={() => setShowSearchDropdown(true)}
+              placeholder="Cari fitur, menu, atau pintasan..."
+              className="w-full bg-white/15 hover:bg-white/20 focus:bg-white/25 text-white placeholder:text-white/70 text-xs pl-9 pr-4 py-1.5 rounded-full border border-white/20 focus:outline-hidden focus:ring-2 focus:ring-[#ec1415]/70 transition font-medium"
             />
+
+            {/* Quick Navigation Dropdown */}
+            {showSearchDropdown && matchingShortcuts.length > 0 && (
+              <div className="absolute left-0 top-full mt-2 w-72 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                  Pintasan Menu ({matchingShortcuts.length})
+                </div>
+                <div className="divide-y divide-slate-50 max-h-56 overflow-y-auto">
+                  {matchingShortcuts.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        if (setActiveSubTab) setActiveSubTab(item.id);
+                        setSearchQuery('');
+                        setShowSearchDropdown(false);
+                      }}
+                      className="w-full text-left px-3.5 py-2 hover:bg-blue-50 transition cursor-pointer flex flex-col"
+                    >
+                      <span className="font-semibold text-xs text-slate-900">{item.label}</span>
+                      <span className="text-[11px] text-slate-500 mt-0.5">{item.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -166,19 +229,19 @@ export default function TopBar({ activeSubTab, onToggleMobile }) {
             title="Pemberitahuan Sistem"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-400 ring-2 ring-[#1c8bb7]" />
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#ec1415] ring-2 ring-[#0f3d6b]" />
           </button>
 
-          <div className="flex items-center gap-2 bg-[#030879]/35 px-3 py-1.5 rounded-full border border-white/20 backdrop-blur-xs">
+          <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-full border border-white/20 backdrop-blur-xs">
             <span className="text-xs font-bold text-white">{currentUser?.name}</span>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#060eff] text-white px-2.5 py-0.5 rounded-full shadow-xs">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#ec1415] text-white px-2.5 py-0.5 rounded-full shadow-xs">
               {currentUser?.role}
             </span>
           </div>
 
           <button 
             onClick={logout}
-            className="p-1.5 sm:px-3 sm:py-1 rounded-full bg-white/15 hover:bg-rose-600 text-white transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+            className="p-1.5 sm:px-3 sm:py-1 rounded-full bg-white/15 hover:bg-[#ec1415] text-white transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
             title="Keluar / Ganti Akun"
           >
             <LogOut className="w-3.5 h-3.5" />

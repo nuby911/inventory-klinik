@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const bcrypt = require('bcryptjs');
 
 function seedDatabase() {
   // Check if users already seeded
@@ -50,10 +51,11 @@ function seedDatabase() {
   `);
 
   const runSeed = db.transaction(() => {
-    // 1. Users
-    const u1 = insertUser.run('Dokter', 'dokter@almedika.com', 'hash_dokter', 'dokter').lastInsertRowid;
-    const u2 = insertUser.run('Apoteker', 'apoteker@almedika.com', 'hash_apoteker', 'apoteker').lastInsertRowid;
-    const u3 = insertUser.run('Logistik', 'admin@almedika.com', 'hash_admin', 'admin').lastInsertRowid;
+    // 1. Users with standard bcrypt password hashes
+    const defaultHash = bcrypt.hashSync('password123', 10);
+    const u1 = insertUser.run('Dokter', 'dokter@almedika.com', defaultHash, 'dokter').lastInsertRowid;
+    const u2 = insertUser.run('Apoteker', 'apoteker@almedika.com', defaultHash, 'apoteker').lastInsertRowid;
+    const u3 = insertUser.run('Logistik', 'admin@almedika.com', defaultHash, 'admin').lastInsertRowid;
 
     // 2. Patients (matching Stitch prototype: Budi Santoso)
     const p1 = insertPatient.run('RM-2026-0842', 'Budi Santoso', 'L', '1984-03-12', '0812-3456-7890', 'O+', 68.0, 'BPJS Mandiri', 'Penisilin / Golongan Beta-Laktam').lastInsertRowid;

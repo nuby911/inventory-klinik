@@ -7,7 +7,7 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const dbPath = path.join(dataDir, 'klinik_almedika.db');
+const dbPath = process.env.DB_PATH || path.join(dataDir, 'klinik_almedika.db');
 const db = new Database(dbPath);
 
 // Enable foreign keys and WAL mode for high concurrency
@@ -117,9 +117,32 @@ function initSchema() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- 9. Table Prescription Item Batches (BPOM Drug Recall & Batch Traceability)
+    CREATE TABLE IF NOT EXISTS prescription_item_batches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        prescription_item_id INTEGER NOT NULL REFERENCES prescription_items(id) ON DELETE CASCADE,
+        batch_id INTEGER NOT NULL REFERENCES medicine_batches(id),
+        batch_number TEXT NOT NULL,
+        expired_date TEXT NOT NULL,
+        dispensed_qty INTEGER NOT NULL CHECK (dispensed_qty > 0),
+        pharmacist_id INTEGER REFERENCES users(id),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Covering & Performance Indexes
+    CREATE INDEX IF NOT EXISTS idx_units_med_ratio ON medicine_units(medicine_id, conversion_ratio DESC);
+    CREATE INDEX IF NOT EXISTS idx_batches_med_fefo ON medicine_batches(medicine_id, stock_qty, expired_date ASC);
+    CREATE INDEX IF NOT EXISTS idx_batches_expiry ON medicine_batches(expired_date ASC);
+    CREATE INDEX IF NOT EXISTS idx_prescriptions_status_cito ON prescriptions(status, is_cito DESC, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_prescriptions_patient ON prescriptions(patient_id);
+    CREATE INDEX IF NOT EXISTS idx_prescriptions_doctor ON prescriptions(doctor_id);
+    CREATE INDEX IF NOT EXISTS idx_prescription_items_rx ON prescription_items(prescription_id);
+    CREATE INDEX IF NOT EXISTS idx_prescription_items_med ON prescription_items(medicine_id);
+    CREATE INDEX IF NOT EXISTS idx_prescription_item_batches_item ON prescription_item_batches(prescription_item_id);
+    CREATE INDEX IF NOT EXISTS idx_prescription_item_batches_batch ON prescription_item_batches(batch_id);
     CREATE INDEX IF NOT EXISTS idx_adjustments_batch ON stock_adjustments(batch_id);
     CREATE INDEX IF NOT EXISTS idx_adjustments_type ON stock_adjustments(adjustment_type);
-    CREATE INDEX IF NOT EXISTS idx_batches_expiry ON medicine_batches(expired_date ASC);
+    CREATE INDEX IF NOT EXISTS idx_medicines_cat_name ON medicines(category, name);
   `);
 
   // Migration: Ensure bpom_nie and barcode exist for existing DBs

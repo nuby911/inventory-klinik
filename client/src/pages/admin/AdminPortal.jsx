@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Camera, 
   QrCode, 
@@ -7,10 +7,12 @@ import {
   CheckCircle2 
 } from 'lucide-react';
 import { api } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
-import BarcodeScannerModal from '../../components/common/BarcodeScannerModal';
-import BarcodeTestSheetModal from '../../components/common/BarcodeTestSheetModal';
+import { useAuth } from '../../context/useAuth';
+import { useSocket } from '../../context/useSocket';
 import { parseGS1Barcode, matchMedicineFromScan } from '../../utils/gs1Parser';
+
+const BarcodeScannerModal = React.lazy(() => import('../../components/common/BarcodeScannerModal'));
+const BarcodeTestSheetModal = React.lazy(() => import('../../components/common/BarcodeTestSheetModal'));
 
 function generateBatchDefaults(med) {
   const defaultUnit = med.units && med.units.length > 0 ? med.units[0].unit_name : med.base_unit;
@@ -28,6 +30,7 @@ function generateBatchDefaults(med) {
 
 export default function AdminPortal({ activeSubTab }) {
   const { currentUser } = useAuth();
+  const { socket } = useSocket();
   // Inventory State
   const [medicines, setMedicines] = useState([]);
   const [kpis, setKpis] = useState(null);
@@ -73,7 +76,9 @@ export default function AdminPortal({ activeSubTab }) {
     rack_location: 'Rak A-01',
     contraindications: '',
     box_ratio: 100,
-    strip_ratio: 10
+    strip_ratio: 10,
+    bpom_nie: '',
+    barcode: ''
   });
 
   // Return to PBF Form State
@@ -87,8 +92,9 @@ export default function AdminPortal({ activeSubTab }) {
 
   const [actionSuccess, setActionSuccess] = useState(null);
   const [actionError, setActionError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const loadAllData = async () => {
+  const loadAllData = useCallback(async () => {
     try {
       setLoading(true);
       const [medsRes, kpiRes, batchRes, adjRes] = await Promise.all([
@@ -105,13 +111,30 @@ export default function AdminPortal({ activeSubTab }) {
       }
       setAdjustments(adjRes.data);
     } catch (e) {
-      console.error(e);
+      console.error('loadAllData error:', e);
+      setActionError('Gagal memuat data inventori: ' + (e.message || 'Koneksi error'));
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [returnForm.batch_id]);
 
   useEffect(() => {
     loadAllData();
-  }, []);
+  }, [loadAllData]);
+
+  // Real-time synchronization
+  useEffect(() => {
+    if (!socket) return;
+    const handleLiveRefresh = () => {
+      loadAllData();
+    };
+    socket.on('stock:updated', handleLiveRefresh);
+    socket.on('prescription:dispensed', handleLiveRefresh);
+    return () => {
+      socket.off('stock:updated', handleLiveRefresh);
+      socket.off('prescription:dispensed', handleLiveRefresh);
+    };
+  }, [socket, loadAllData]);
 
   const openRestock = (med) => {
     setSelectedMedForRestock(med);
@@ -232,6 +255,8 @@ export default function AdminPortal({ activeSubTab }) {
         min_stock_alert: Number(newMedForm.min_stock_alert),
         rack_location: newMedForm.rack_location,
         contraindications: newMedForm.contraindications,
+        bpom_nie: newMedForm.bpom_nie,
+        barcode: newMedForm.barcode,
         units
       });
 
@@ -247,12 +272,18 @@ export default function AdminPortal({ activeSubTab }) {
   const handleReturnSubmit = async (e) => {
     e.preventDefault();
     if (!returnForm.batch_id) return;
+    const selectedBatch = batches.find(b => b.id === Number(returnForm.batch_id));
+    const qty = Number(returnForm.quantity_input);
+    if (selectedBatch && qty > selectedBatch.stock_qty) {
+      setActionError(`Jumlah retur (${qty} ${selectedBatch.base_unit}) melebihi sisa stok fisik batch (${selectedBatch.stock_qty} ${selectedBatch.base_unit}).`);
+      return;
+    }
     try {
       const res = await api.createAdjustment({
         batch_id: Number(returnForm.batch_id),
         user_id: currentUser?.id || 3,
         adjustment_type: returnForm.adjustment_type,
-        quantity_input: Number(returnForm.quantity_input),
+        quantity_input: qty,
         reason: returnForm.reason,
         distributor: returnForm.distributor
       });
@@ -289,6 +320,13 @@ export default function AdminPortal({ activeSubTab }) {
         <div className="p-3 bg-rose-50 border border-rose-300 rounded text-xs font-medium text-rose-900 flex items-center justify-between">
           <span>{actionError}</span>
           <button onClick={() => setActionError(null)}>✕</button>
+        </div>
+      )}
+
+      {loading && (
+        <div className="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded text-xs font-medium text-blue-800">
+          <div className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin shrink-0" />
+          <span>Memperbarui data inventori & audit log...</span>
         </div>
       )}
 
@@ -955,6 +993,29 @@ export default function AdminPortal({ activeSubTab }) {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-slate-700 block mb-1 font-semibold">Nomor NIE BPOM:</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: DKL1234567890A1"
+                    value={newMedForm.bpom_nie}
+                    onChange={(e) => setNewMedForm({ ...newMedForm, bpom_nie: e.target.value.toUpperCase() })}
+                    className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono text-purple-800"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-700 block mb-1 font-semibold">Barcode / GTIN (1D/2D):</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: 8991234567890"
+                    value={newMedForm.barcode}
+                    onChange={(e) => setNewMedForm({ ...newMedForm, barcode: e.target.value.trim() })}
+                    className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono text-slate-800"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="text-slate-700 block mb-1 font-semibold">Kontraindikasi Alergi:</label>
                 <input
@@ -1074,21 +1135,29 @@ export default function AdminPortal({ activeSubTab }) {
       )}
 
       {/* 2D Barcode & GS1 DataMatrix Camera Scanner Modal */}
-      <BarcodeScannerModal
-        isOpen={cameraModalOpen}
-        onClose={() => setCameraModalOpen(false)}
-        onScanSuccess={(code) => {
-          setCameraModalOpen(false);
-          processScannedCode(code);
-        }}
-        title="Scan 2D Barcode BPOM (Kamera)"
-      />
+      {cameraModalOpen && (
+        <React.Suspense fallback={null}>
+          <BarcodeScannerModal
+            isOpen={cameraModalOpen}
+            onClose={() => setCameraModalOpen(false)}
+            onScanSuccess={(code) => {
+              setCameraModalOpen(false);
+              processScannedCode(code);
+            }}
+            title="Scan 2D Barcode BPOM (Kamera)"
+          />
+        </React.Suspense>
+      )}
 
       {/* Barcode Test Sheet Modal (Rendered on laptop screen to scan with phone) */}
-      <BarcodeTestSheetModal
-        isOpen={barcodeSheetOpen}
-        onClose={() => setBarcodeSheetOpen(false)}
-      />
+      {barcodeSheetOpen && (
+        <React.Suspense fallback={null}>
+          <BarcodeTestSheetModal
+            isOpen={barcodeSheetOpen}
+            onClose={() => setBarcodeSheetOpen(false)}
+          />
+        </React.Suspense>
+      )}
     </div>
   );
 }

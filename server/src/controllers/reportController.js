@@ -1,5 +1,42 @@
 const db = require('../config/database');
 
+function buildDateFilter(dateColumn, period, targetDate, startDate, endDate) {
+  if (startDate && endDate) {
+    return {
+      clause: `WHERE DATE(${dateColumn}) BETWEEN DATE(?) AND DATE(?)`,
+      params: [startDate, endDate]
+    };
+  }
+  if (period === 'daily') {
+    return {
+      clause: `WHERE DATE(${dateColumn}) = DATE(?)`,
+      params: [targetDate]
+    };
+  }
+  if (period === 'weekly') {
+    return {
+      clause: `WHERE DATE(${dateColumn}) BETWEEN DATE(?, '-6 days') AND DATE(?)`,
+      params: [targetDate, targetDate]
+    };
+  }
+  if (period === 'monthly') {
+    return {
+      clause: `WHERE strftime('%Y-%m', ${dateColumn}) = strftime('%Y-%m', ?)`,
+      params: [targetDate]
+    };
+  }
+  if (period === 'all') {
+    return {
+      clause: ``,
+      params: []
+    };
+  }
+  return {
+    clause: `WHERE DATE(${dateColumn}) = DATE(?)`,
+    params: [targetDate]
+  };
+}
+
 function getRecapReport(req, res) {
   try {
     const { period = 'daily', date, startDate, endDate } = req.query;
@@ -7,30 +44,9 @@ function getRecapReport(req, res) {
     // Resolve date boundary (defaults to targetDate or current date)
     const targetDate = date || new Date().toISOString().split('T')[0];
 
-    let whereClause = '';
-    let params = [];
-
-    if (startDate && endDate) {
-      whereClause = `WHERE DATE(p.created_at) BETWEEN DATE(?) AND DATE(?)`;
-      params = [startDate, endDate];
-    } else if (period === 'daily') {
-      whereClause = `WHERE DATE(p.created_at) = DATE(?)`;
-      params = [targetDate];
-    } else if (period === 'weekly') {
-      // 7 days ending on targetDate
-      whereClause = `WHERE DATE(p.created_at) BETWEEN DATE(?, '-6 days') AND DATE(?)`;
-      params = [targetDate, targetDate];
-    } else if (period === 'monthly') {
-      // Month of targetDate
-      whereClause = `WHERE strftime('%Y-%m', p.created_at) = strftime('%Y-%m', ?)`;
-      params = [targetDate];
-    } else if (period === 'all') {
-      whereClause = ``;
-      params = [];
-    } else {
-      whereClause = `WHERE DATE(p.created_at) = DATE(?)`;
-      params = [targetDate];
-    }
+    const rxFilter = buildDateFilter('p.created_at', period, targetDate, startDate, endDate);
+    const whereClause = rxFilter.clause;
+    const params = rxFilter.params;
 
     // 1. Prescription summary
     const rxSummary = db.prepare(`
@@ -70,22 +86,7 @@ function getRecapReport(req, res) {
     `).all(...params);
 
     // 3. Top dispensed / prescribed medicines in the period
-    let itemWhereClause = '';
-    let itemParams = [];
-    if (startDate && endDate) {
-      itemWhereClause = `WHERE DATE(p.created_at) BETWEEN DATE(?) AND DATE(?)`;
-      itemParams = [startDate, endDate];
-    } else if (period === 'daily') {
-      itemWhereClause = `WHERE DATE(p.created_at) = DATE(?)`;
-      itemParams = [targetDate];
-    } else if (period === 'weekly') {
-      itemWhereClause = `WHERE DATE(p.created_at) BETWEEN DATE(?, '-6 days') AND DATE(?)`;
-      itemParams = [targetDate, targetDate];
-    } else if (period === 'monthly') {
-      itemWhereClause = `WHERE strftime('%Y-%m', p.created_at) = strftime('%Y-%m', ?)`;
-      itemParams = [targetDate];
-    }
-
+    const itemFilter = buildDateFilter('p.created_at', period, targetDate, startDate, endDate);
     const topMedicines = db.prepare(`
       SELECT 
         m.id,
@@ -98,11 +99,11 @@ function getRecapReport(req, res) {
       FROM prescription_items pi
       JOIN prescriptions p ON pi.prescription_id = p.id
       JOIN medicines m ON pi.medicine_id = m.id
-      ${itemWhereClause}
+      ${itemFilter.clause}
       GROUP BY m.id
       ORDER BY total_quantity_base DESC
       LIMIT 10
-    `).all(...itemParams);
+    `).all(...itemFilter.params);
 
     // 4. Daily trends inside the selected range
     const dailyTrends = db.prepare(`
@@ -118,22 +119,7 @@ function getRecapReport(req, res) {
     `).all(...params);
 
     // 5. Stock adjustments summary in the same period
-    let adjWhereClause = '';
-    let adjParams = [];
-    if (startDate && endDate) {
-      adjWhereClause = `WHERE DATE(created_at) BETWEEN DATE(?) AND DATE(?)`;
-      adjParams = [startDate, endDate];
-    } else if (period === 'daily') {
-      adjWhereClause = `WHERE DATE(created_at) = DATE(?)`;
-      adjParams = [targetDate];
-    } else if (period === 'weekly') {
-      adjWhereClause = `WHERE DATE(created_at) BETWEEN DATE(?, '-6 days') AND DATE(?)`;
-      adjParams = [targetDate, targetDate];
-    } else if (period === 'monthly') {
-      adjWhereClause = `WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', ?)`;
-      adjParams = [targetDate];
-    }
-
+    const adjFilter = buildDateFilter('created_at', period, targetDate, startDate, endDate);
     const adjustmentSummary = db.prepare(`
       SELECT 
         COUNT(*) as total_adjustments,
@@ -142,8 +128,8 @@ function getRecapReport(req, res) {
         SUM(CASE WHEN adjustment_type = 'damaged' THEN 1 ELSE 0 END) as damaged_count,
         SUM(CASE WHEN adjustment_type = 'expired_disposal' THEN 1 ELSE 0 END) as expired_count
       FROM stock_adjustments
-      ${adjWhereClause}
-    `).get(...adjParams);
+      ${adjFilter.clause}
+    `).get(...adjFilter.params);
 
     const totalRx = rxSummary?.total_prescriptions || 0;
     const completedRx = rxSummary?.completed_count || 0;

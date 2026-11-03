@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { 
   Camera, 
@@ -60,50 +60,51 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) 
     }
   };
 
-  // Inisialisasi daftar kamera dan mulai scanner saat modal dibuka
-  useEffect(() => {
-    if (!isOpen) {
-      stopScanner();
-      return;
+  const stopScanner = useCallback(async () => {
+    if (isStoppingRef.current) return;
+    if (html5QrCodeRef.current) {
+      isStoppingRef.current = true;
+      try {
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop();
+        }
+        html5QrCodeRef.current.clear();
+      } catch (err) {
+        console.warn('Stop scanner warning:', err);
+      } finally {
+        try {
+          const videoEl = document.querySelector('#qr-reader-target video');
+          if (videoEl && videoEl.srcObject) {
+            const stream = videoEl.srcObject;
+            stream.getTracks().forEach(track => track.stop());
+            videoEl.srcObject = null;
+          }
+        } catch {}
+
+        html5QrCodeRef.current = null;
+        setIsScanning(false);
+        setTorchOn(false);
+        setHasTorch(false);
+        isStoppingRef.current = false;
+      }
+    }
+  }, []);
+
+  const onDecodeSuccess = useCallback((decodedText) => {
+    playBeep();
+    const parsed = parseGS1DataMatrix(decodedText);
+    setLastScannedResult(parsed);
+
+    if (onScanSuccess) {
+      onScanSuccess(parsed, decodedText);
     }
 
-    setCameraError(null);
-    setLastScannedResult(null);
+    setTimeout(() => {
+      onClose();
+    }, 600);
+  }, [onClose, onScanSuccess]);
 
-    let isMounted = true;
-
-    // Dapatkan daftar kamera perangkat
-    Html5Qrcode.getCameras()
-      .then((devices) => {
-        if (!isMounted) return;
-        if (devices && devices.length) {
-          setCameras(devices);
-          // Prioritaskan kamera belakang (environment) untuk scanning kemasan
-          const backCam = devices.find(d => 
-            d.label.toLowerCase().includes('back') || 
-            d.label.toLowerCase().includes('belakang') ||
-            d.label.toLowerCase().includes('environment')
-          );
-          const defaultCamId = backCam ? backCam.id : devices[0].id;
-          setSelectedCameraId(defaultCamId);
-          startScannerWithCamera(defaultCamId);
-        } else {
-          // Coba fallback dengan facingMode environment
-          startScannerWithFacingMode('environment');
-        }
-      })
-      .catch((err) => {
-        console.warn('Gagal membaca getCameras, fallback ke environment:', err);
-        startScannerWithFacingMode('environment');
-      });
-
-    return () => {
-      isMounted = false;
-      stopScanner();
-    };
-  }, [isOpen]);
-
-  async function startScannerWithCamera(cameraId) {
+  const startScannerWithCamera = useCallback(async (cameraId) => {
     await stopScanner();
     if (!scannerRef.current) return;
 
@@ -134,15 +135,12 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) 
         cameraId,
         config,
         onDecodeSuccess,
-        () => {
-          // frame ignore callback
-        }
+        () => {}
       );
 
       setIsScanning(true);
       setCameraError(null);
 
-      // Cek ketersediaan torch / senter
       try {
         const capabilities = html5QrCode.getRunningTrackCapabilities();
         if (capabilities && capabilities.torch) {
@@ -154,9 +152,9 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) 
       setCameraError(err.message || 'Gagal mengakses kamera perangkat. Pastikan izin kamera aktif.');
       setIsScanning(false);
     }
-  }
+  }, [onDecodeSuccess, stopScanner]);
 
-  async function startScannerWithFacingMode(facingMode = 'environment') {
+  const startScannerWithFacingMode = useCallback(async (facingMode = 'environment') => {
     await stopScanner();
     if (!scannerRef.current) return;
 
@@ -192,26 +190,45 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) 
       setCameraError('Tidak dapat membuka kamera. Pastikan browser diizinkan mengakses kamera.');
       setIsScanning(false);
     }
-  }
+  }, [onDecodeSuccess, stopScanner]);
 
-  async function stopScanner() {
-    if (isStoppingRef.current) return;
-    if (html5QrCodeRef.current && isScanning) {
-      isStoppingRef.current = true;
-      try {
-        await html5QrCodeRef.current.stop();
-        html5QrCodeRef.current.clear();
-      } catch (err) {
-        console.warn('Stop scanner warning:', err);
-      } finally {
-        html5QrCodeRef.current = null;
-        setIsScanning(false);
-        setTorchOn(false);
-        setHasTorch(false);
-        isStoppingRef.current = false;
-      }
+  // Inisialisasi daftar kamera dan mulai scanner saat modal dibuka
+  useEffect(() => {
+    if (!isOpen) {
+      stopScanner();
+      return;
     }
-  }
+
+    let isMounted = true;
+
+    Html5Qrcode.getCameras()
+      .then((devices) => {
+        if (!isMounted) return;
+        if (devices && devices.length) {
+          setCameras(devices);
+          const backCam = devices.find(d => 
+            d.label.toLowerCase().includes('back') || 
+            d.label.toLowerCase().includes('belakang') ||
+            d.label.toLowerCase().includes('environment')
+          );
+          const defaultCamId = backCam ? backCam.id : devices[0].id;
+          setSelectedCameraId(defaultCamId);
+          startScannerWithCamera(defaultCamId);
+        } else {
+          startScannerWithFacingMode('environment');
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.warn('Gagal membaca getCameras, fallback ke environment:', err);
+        startScannerWithFacingMode('environment');
+      });
+
+    return () => {
+      isMounted = false;
+      stopScanner();
+    };
+  }, [isOpen, startScannerWithCamera, startScannerWithFacingMode, stopScanner]);
 
   const toggleTorch = async () => {
     if (!html5QrCodeRef.current || !hasTorch) return;
@@ -232,21 +249,6 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }) 
     startScannerWithCamera(newId);
   };
 
-  const onDecodeSuccess = (decodedText) => {
-    playBeep();
-    const parsed = parseGS1DataMatrix(decodedText);
-    setLastScannedResult(parsed);
-
-    // Kirim hasil pemindaian ke callback induk
-    if (onScanSuccess) {
-      onScanSuccess(parsed, decodedText);
-    }
-
-    // Berikan sedikit jeda animasi sukses sebelum menutup
-    setTimeout(() => {
-      onClose();
-    }, 600);
-  };
 
   // Simulasi / Contoh Uji Coba Cepat (Sangat Berguna untuk Demonstrasi & Testing)
   const handleSimulateSample = (sampleType) => {

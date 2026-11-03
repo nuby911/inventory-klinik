@@ -80,6 +80,16 @@ function addBatch(req, res) {
       return res.status(400).json({ success: false, message: 'Obat, nomor batch, tanggal ED, dan kuantitas wajib diisi' });
     }
 
+    const qtyNumber = Number(quantity_input);
+    if (isNaN(qtyNumber) || qtyNumber <= 0) {
+      return res.status(400).json({ success: false, message: 'Kuantitas obat masuk harus berupa angka positif lebih besar dari 0' });
+    }
+
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(expired_date) || isNaN(Date.parse(expired_date))) {
+      return res.status(400).json({ success: false, message: 'Format tanggal kedaluwarsa tidak valid (gunakan format YYYY-MM-DD)' });
+    }
+
     const med = db.prepare('SELECT * FROM medicines WHERE id = ?').get(medicine_id);
     if (!med) {
       return res.status(404).json({ success: false, message: 'Obat tidak ditemukan' });

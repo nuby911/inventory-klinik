@@ -4,39 +4,11 @@ import {
   Lock, 
   Eye, 
   EyeOff, 
-  AlertCircle
+  AlertCircle,
+  HelpCircle,
+  X
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-
-function CaduceusIcon({ className = "w-12 h-12" }) {
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      fill="currentColor"
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* Central Staff & Knob */}
-      <circle cx="50" cy="14" r="6" />
-      <path d="M48 18 H52 V88 H48 Z" rx="2" />
-      <circle cx="50" cy="90" r="3" />
-      
-      {/* Left Wing */}
-      <path d="M48 24 C32 12, 16 16, 10 27 C 22 28, 34 32, 48 38 Z" opacity="0.95" />
-      {/* Right Wing */}
-      <path d="M52 24 C68 12, 84 16, 90 27 C 78 28, 66 32, 52 38 Z" opacity="0.95" />
-      
-      {/* Entwined Serpents Left Body */}
-      <path
-        d="M48 38 C 30 42, 28 52, 42 60 C 50 64, 52 70, 48 76 C 44 82, 38 84, 46 88 C 47 88, 48 87, 49 86 C 45 84, 47 80, 50 75 C 56 68, 52 60, 44 56 C 36 52, 36 46, 48 42 Z"
-      />
-      {/* Entwined Serpents Right Body */}
-      <path
-        d="M52 38 C 70 42, 72 52, 58 60 C 50 64, 48 70, 52 76 C 56 82, 62 84, 54 88 C 53 88, 52 87, 51 86 C 55 84, 53 80, 50 75 C 44 68, 48 60, 56 56 C 64 52, 64 46, 52 42 Z"
-      />
-    </svg>
-  );
-}
+import { useAuth } from '../../context/useAuth';
 
 export default function LoginPage() {
   const { login, loading, error, setError } = useAuth();
@@ -46,6 +18,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [localError, setLocalError] = useState(null);
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
   const roles = [
     {
@@ -103,42 +76,52 @@ export default function LoginPage() {
 
   return (
     <div 
-      className="min-h-screen w-full flex flex-col justify-center items-center p-4 sm:p-6 relative select-none"
+      className="min-h-screen w-full flex flex-col justify-center items-center p-4 sm:p-6 relative select-none overflow-hidden"
       style={{
-        background: 'linear-gradient(135deg, #74cbe9 0%, #46b4de 40%, #299dc9 100%)'
+        background: 'linear-gradient(135deg, #091f36 0%, #0f3d6b 45%, #155ea3 100%)'
       }}
     >
-      {/* Background Soft Medical Glow */}
-      <div className="absolute inset-0 bg-radial from-white/20 via-transparent to-black/10 pointer-events-none" />
+      {/* Background Soft Medical Ambient Glow (Mirroring Blue & Red from Logo) */}
+      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-[#155ea3]/25 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-[#ec1415]/15 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Top Brand Header (Caduceus Logo & Text) */}
-      <div className="relative z-10 flex items-center justify-center gap-3 mb-6 sm:mb-8 text-[#030879]">
-        <CaduceusIcon className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 drop-shadow-xs" />
+      {/* Top Brand Header (Clinic Logo & Text) */}
+      <div className="relative z-10 flex items-center justify-center gap-3.5 mb-6 sm:mb-8 text-white">
+        <img 
+          src="/logo-badge.png" 
+          alt="Logo Klinik ELMedika" 
+          className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 drop-shadow-xl rounded-full object-contain ring-2 ring-white/40 bg-white" 
+        />
         <div className="flex flex-col">
-          <span className="font-extrabold text-2xl sm:text-3xl tracking-tight leading-none">
-            Klinik Almedika
+          <div className="font-extrabold text-2xl sm:text-3xl tracking-tight leading-none text-white drop-shadow-xs">
+            <span>Klinik </span>
+            <span className="text-white">EL</span>
+            <span className="text-[#ff4d4f]">Medika</span>
+          </div>
+          <span className="font-semibold text-xs sm:text-sm tracking-wider uppercase text-sky-200/90 mt-1.5">
+            Praktek Dokter & Rumah Sunat Modern
           </span>
-          <span className="font-semibold text-xs sm:text-sm tracking-wider uppercase opacity-85 mt-1">
-            SIM Farmasi & Rawat Jalan
+          <span className="text-[11px] font-medium tracking-widest uppercase text-white/60 mt-0.5">
+            SIM Farmasi & Rawat Jalan Terpadu
           </span>
         </div>
       </div>
 
-      {/* Main Glass/Cyan Login Panel */}
-      <div className="relative z-10 w-full max-w-[580px] bg-gradient-to-b from-[#2b9eca] to-[#1c8bb7] rounded-[32px] sm:rounded-[40px] border-2 border-white/90 shadow-[0_20px_50px_rgba(3,20,70,0.3)] p-6 sm:p-10 overflow-hidden">
+      {/* Main Glass/Navy Login Panel */}
+      <div className="relative z-10 w-full max-w-[580px] bg-gradient-to-b from-white/15 to-white/5 backdrop-blur-xl rounded-[32px] sm:rounded-[40px] border border-white/25 shadow-[0_25px_60px_rgba(2,12,30,0.6)] p-6 sm:p-10 overflow-hidden">
         
-        {/* Subtle Watermark Inside Card */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.09] text-white">
-          <CaduceusIcon className="w-80 h-80 transform -rotate-6" />
+        {/* Subtle Brand Logo Watermark Inside Card */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.07]">
+          <img src="/logo.png" alt="watermark" className="w-80 h-80 object-contain filter invert brightness-200" />
         </div>
 
         {/* Card Title */}
-        <h2 className="relative z-10 text-center text-white text-xl sm:text-2xl font-light tracking-[0.22em] uppercase mb-6 sm:mb-7 drop-shadow-xs">
+        <h2 className="relative z-10 text-center text-white text-lg sm:text-xl font-light tracking-[0.25em] uppercase mb-6 drop-shadow-xs">
           USER LOGIN
         </h2>
 
         {/* Role Selector Pills */}
-        <div className="relative z-10 flex items-center justify-center gap-2.5 sm:gap-3.5 mb-5">
+        <div className="relative z-10 flex items-center justify-center gap-2.5 sm:gap-3 mb-5">
           {roles.map((r) => {
             const isSelected = selectedRole === r.id;
             return (
@@ -146,10 +129,10 @@ export default function LoginPage() {
                 key={r.id}
                 type="button"
                 onClick={() => handleRoleSelect(r)}
-                className={`px-5 sm:px-7 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer shadow-md ${
+                className={`px-5 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer shadow-md ${
                   isSelected
-                    ? 'bg-[#060eff] text-white shadow-lg ring-2 ring-white/70 scale-105'
-                    : 'bg-[#030879] text-white/90 hover:bg-[#05109b] hover:text-white'
+                    ? 'bg-[#ec1415] text-white shadow-lg shadow-rose-950/40 ring-2 ring-white/90 scale-105'
+                    : 'bg-[#0f3d6b]/80 text-white/90 hover:bg-[#155ea3] hover:text-white border border-white/10'
                 }`}
               >
                 {r.label}
@@ -160,8 +143,8 @@ export default function LoginPage() {
 
         {/* Active Staff Info Pill */}
         <div className="relative z-10 flex justify-center mb-5">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#030879]/30 backdrop-blur-xs text-white/95 text-[11px] sm:text-xs font-medium border border-white/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-black/25 backdrop-blur-xs text-white/95 text-[11px] sm:text-xs font-medium border border-white/15">
+            <span className="w-2 h-2 rounded-full bg-[#ec1415] animate-pulse" />
             <span>Akses Peran: <strong>{activeRole.name}</strong> ({activeRole.roleTitle})</span>
           </div>
         </div>
@@ -169,7 +152,7 @@ export default function LoginPage() {
         {/* Error Notification */}
         {(localError || error) && (
           <div className="relative z-10 mb-4 px-4 py-2.5 bg-white text-rose-700 text-xs font-semibold rounded-full shadow-md flex items-center justify-center gap-2 max-w-[460px] mx-auto border border-rose-200">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <AlertCircle className="w-4 h-4 shrink-0 text-[#ec1415]" />
             <span className="truncate">{localError || error}</span>
           </div>
         )}
@@ -179,7 +162,7 @@ export default function LoginPage() {
           
           {/* Email Pill Input */}
           <div className="relative">
-            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#1b8ebc] text-white flex items-center justify-center shadow-xs">
+            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#155ea3] text-white flex items-center justify-center shadow-xs">
               <User className="w-4 h-4" />
             </div>
             <input
@@ -189,13 +172,13 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="nama@almedika.com"
-              className="w-full h-12 sm:h-13 pl-13 pr-4 rounded-full bg-white text-slate-800 font-medium text-xs sm:text-sm border border-slate-200/60 shadow-inner focus:outline-hidden focus:ring-2 focus:ring-white transition"
+              className="w-full h-12 sm:h-13 pl-13 pr-4 rounded-full bg-white text-slate-800 font-medium text-xs sm:text-sm border border-slate-200 shadow-inner focus:outline-hidden focus:ring-2 focus:ring-[#155ea3] transition"
             />
           </div>
 
           {/* Password Pill Input */}
           <div className="relative">
-            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#1b8ebc] text-white flex items-center justify-center shadow-xs">
+            <div className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#155ea3] text-white flex items-center justify-center shadow-xs">
               <Lock className="w-4 h-4" />
             </div>
             <input
@@ -205,7 +188,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••••••"
-              className="w-full h-12 sm:h-13 pl-13 pr-11 rounded-full bg-white text-slate-800 font-medium text-xs sm:text-sm border border-slate-200/60 shadow-inner focus:outline-hidden focus:ring-2 focus:ring-white transition font-mono tracking-wider"
+              className="w-full h-12 sm:h-13 pl-13 pr-11 rounded-full bg-white text-slate-800 font-medium text-xs sm:text-sm border border-slate-200 shadow-inner focus:outline-hidden focus:ring-2 focus:ring-[#155ea3] transition font-mono tracking-wider"
             />
             <button
               type="button"
@@ -224,16 +207,16 @@ export default function LoginPage() {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-white/60 bg-white/20 text-[#030879] focus:ring-0 cursor-pointer accent-[#030879]"
+                className="w-3.5 h-3.5 rounded border-white/60 bg-white/20 text-[#155ea3] focus:ring-0 cursor-pointer accent-[#155ea3]"
               />
               <span>Remember Me</span>
             </label>
             <button
               type="button"
-              onClick={() => alert('Untuk bantuan reset sandi, hubungi bagian IT Administrator Klinik Almedika.')}
-              className="text-white hover:text-white/80 hover:underline cursor-pointer"
+              onClick={() => setForgotModalOpen(true)}
+              className="text-white/90 hover:text-white hover:underline cursor-pointer"
             >
-              Forget Password ?
+              Lupa Sandi?
             </button>
           </div>
 
@@ -242,7 +225,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="min-w-[150px] px-8 py-2.5 sm:py-3 rounded-full bg-[#030879] hover:bg-[#020557] active:bg-[#010338] text-white font-semibold text-sm sm:text-base tracking-wide shadow-lg hover:shadow-xl transition-all duration-150 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+              className="min-w-[170px] px-8 py-2.5 sm:py-3 rounded-full bg-gradient-to-r from-[#155ea3] to-[#0f3d6b] hover:from-[#ec1415] hover:to-[#c91011] text-white font-bold text-sm sm:text-base tracking-wider shadow-lg shadow-black/40 hover:shadow-rose-950/50 transition-all duration-200 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 border border-white/20"
             >
               {loading ? (
                 <>
@@ -250,7 +233,7 @@ export default function LoginPage() {
                   <span>Memproses...</span>
                 </>
               ) : (
-                <span>Login</span>
+                <span>Masuk Sistem</span>
               )}
             </button>
           </div>
@@ -259,9 +242,49 @@ export default function LoginPage() {
 
       </div>
 
-      {/* Footer Info */}
-      <div className="relative z-10 mt-6 text-center text-xs text-[#030879]/80 font-medium">
-        <p>© {new Date().getFullYear()} Klinik Almedika Rajabasa · Bandar Lampung</p>
+      {/* Reset Password Assistance Modal */}
+      {forgotModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-200 text-slate-800 text-xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-[#155ea3] font-bold text-sm">
+                <HelpCircle className="w-5 h-5 text-[#155ea3]" />
+                <span>Bantuan Akses Sandi</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setForgotModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-slate-600 leading-relaxed">
+              Untuk alasan keamanan rekam medis dan data obat klinik, pengaturan ulang kata sandi dilakukan secara internal oleh <strong>IT Administrator Klinik ELMedika</strong>.
+            </p>
+            <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 font-medium space-y-1">
+              <div>Akun Demo Default:</div>
+              <div className="font-mono text-[11px] font-semibold text-blue-950">Password: password123</div>
+            </div>
+            <div className="pt-2 text-right">
+              <button
+                type="button"
+                onClick={() => setForgotModalOpen(false)}
+                className="px-4 py-1.5 bg-[#155ea3] hover:bg-[#0f3d6b] text-white font-semibold rounded-lg text-xs"
+              >
+                Mengerti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer Info with Logo Slogan */}
+      <div className="relative z-10 mt-6 text-center text-xs text-white/70 font-medium space-y-1">
+        <p className="tracking-widest uppercase text-sky-200/80 text-[11px]">
+          —— Nyaman, Modern, Profesional ——
+        </p>
+        <p>© {new Date().getFullYear()} Klinik ELMedika · Rumah Sunat ELNARA · Bandar Lampung</p>
       </div>
 
     </div>

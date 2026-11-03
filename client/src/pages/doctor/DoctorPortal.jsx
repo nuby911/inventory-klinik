@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { UserPlus, Search, UserCheck, X } from 'lucide-react';
 import { api } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
-import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/useAuth';
+import { useSocket } from '../../context/useSocket';
 
 // Calculate age from birth date string (e.g. '1984-03-12')
 function calculateAge(birthDateStr) {
   if (!birthDateStr) return null;
   const birth = new Date(birthDateStr);
+  if (isNaN(birth.getTime())) return null;
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
@@ -23,6 +25,19 @@ export default function DoctorPortal({ activeSubTab }) {
   // Patient State
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [newPatientModalOpen, setNewPatientModalOpen] = useState(false);
+  const [patientSearchQuery, setPatientSearchQuery] = useState('');
+  const [isCreatingPatient, setIsCreatingPatient] = useState(false);
+  const [newPatientForm, setNewPatientForm] = useState({
+    name: '',
+    gender: 'L',
+    date_of_birth: '1995-01-01',
+    phone: '',
+    blood_type: 'O+',
+    weight_kg: 60,
+    insurance_type: 'Umum',
+    allergies: 'Tidak Ada'
+  });
 
   // Medicine State
   const [medicines, setMedicines] = useState([]);
@@ -77,19 +92,19 @@ export default function DoctorPortal({ activeSubTab }) {
     'Bila Perlu (PRN)'
   ];
 
-  const loadPatients = async () => {
+  const loadPatients = useCallback(async () => {
     try {
       const res = await api.getPatients();
       setPatients(res.data);
       if (res.data.length > 0) {
-        setSelectedPatient(res.data[0]);
+        setSelectedPatient(prev => prev || res.data[0]);
       }
     } catch (e) {
       console.error(e);
     }
-  };
+  }, []);
 
-  const loadMedicines = async () => {
+  const loadMedicines = useCallback(async () => {
     try {
       setLoadingMeds(true);
       const res = await api.getMedicines();
@@ -99,9 +114,9 @@ export default function DoctorPortal({ activeSubTab }) {
     } finally {
       setLoadingMeds(false);
     }
-  };
+  }, []);
 
-  const loadDoctorHistory = async () => {
+  const loadDoctorHistory = useCallback(async () => {
     try {
       setLoadingHistory(true);
       const res = await api.getPrescriptions();
@@ -111,40 +126,106 @@ export default function DoctorPortal({ activeSubTab }) {
     } finally {
       setLoadingHistory(false);
     }
+  }, []);
+
+  const handleCreatePatient = async (e) => {
+    if (e) e.preventDefault();
+    if (!newPatientForm.name.trim()) {
+      setActionError('Nama lengkap pasien wajib diisi.');
+      return;
+    }
+    setIsCreatingPatient(true);
+    setActionError(null);
+    try {
+      const res = await api.createPatient(newPatientForm);
+      const newPt = res.data;
+      setPatients(prev => [newPt, ...prev]);
+      setSelectedPatient(newPt);
+      setNewPatientModalOpen(false);
+      setActionSuccess(`Pasien baru ${newPt.name} (${newPt.medical_record_number}) berhasil didaftarkan dan dipilih untuk peresepan.`);
+      setNewPatientForm({
+        name: '',
+        gender: 'L',
+        date_of_birth: '1995-01-01',
+        phone: '',
+        blood_type: 'O+',
+        weight_kg: 60,
+        insurance_type: 'Umum',
+        allergies: 'Tidak Ada'
+      });
+      setTimeout(() => setActionSuccess(null), 4000);
+    } catch (err) {
+      setActionError(err.message || 'Gagal mendaftarkan pasien baru.');
+    } finally {
+      setIsCreatingPatient(false);
+    }
   };
 
   useEffect(() => {
     loadPatients();
     loadMedicines();
     loadDoctorHistory();
-  }, []);
+  }, [loadPatients, loadMedicines, loadDoctorHistory]);
 
-  // Listen to live prescription status changes
+  // Listen to live prescription status and stock changes
   useEffect(() => {
     if (!socket) return;
     const handleStatusChanged = () => {
       loadDoctorHistory();
     };
+    const handleStockUpdated = () => {
+      loadMedicines();
+    };
+
     socket.on('prescription:new', handleStatusChanged);
     socket.on('prescription:status_changed', handleStatusChanged);
     socket.on('prescription:dispensed', handleStatusChanged);
+    socket.on('stock:updated', handleStockUpdated);
+
     return () => {
       socket.off('prescription:new', handleStatusChanged);
       socket.off('prescription:status_changed', handleStatusChanged);
       socket.off('prescription:dispensed', handleStatusChanged);
+      socket.off('stock:updated', handleStockUpdated);
     };
-  }, [socket]);
+  }, [socket, loadDoctorHistory, loadMedicines]);
 
   const isContraindicated = (med) => {
     if (!selectedPatient || !selectedPatient.allergies || !med.contraindications) return false;
-    const patientAllergy = selectedPatient.allergies.toLowerCase();
-    const contras = med.contraindications.toLowerCase().split(/[,/]/).map(s => s.trim());
-    return contras.some(c => c && (patientAllergy.includes(c) || (c.includes('penisilin') && patientAllergy.includes('penisilin'))));
+    const patientAllergy = selectedPatient.allergies.toLowerCase().trim();
+    if (!patientAllergy || patientAllergy === 'tidak ada' || patientAllergy === 'none' || patientAllergy === '-') {
+      return false;
+    }
+    const patientTokens = patientAllergy
+      .split(/[,/;|]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+    const contraTokens = med.contraindications
+      .toLowerCase()
+      .split(/[,/;|]+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    for (const pt of patientTokens) {
+      for (const ct of contraTokens) {
+        if (pt === ct) return true;
+        const cleanPt = pt.replace(/\b(alergi|golongan|obat|terhadap)\b/g, '').trim();
+        const cleanCt = ct.replace(/\b(alergi|golongan|obat|terhadap)\b/g, '').trim();
+        if (cleanPt && cleanCt) {
+          if (cleanPt.includes(cleanCt) || cleanCt.includes(cleanPt)) return true;
+        }
+      }
+    }
+    return false;
   };
 
   const handleAddMedicine = (med) => {
     if (isContraindicated(med)) {
       setActionError(`Obat ${med.name} memiliki kontraindikasi dengan alergi pasien (${selectedPatient.allergies}).`);
+      return;
+    }
+    if (med.total_stock <= 0) {
+      setActionError(`Stok obat ${med.name} sedang KOSONG (0 ${med.base_unit}). Tidak dapat ditambahkan ke resep.`);
       return;
     }
 
@@ -218,16 +299,19 @@ export default function DoctorPortal({ activeSubTab }) {
     setActionError(null);
 
     try {
+      const isRacikan = prescriptionType === 'racikan';
       const payload = {
         patient_id: selectedPatient.id,
         doctor_id: currentUser.id,
         is_cito: isCito,
-        notes: doctorNotes,
+        notes: isRacikan ? `[RACIKAN: ${racikanName} (${racikanQty} Bungkus) - Signa: ${racikanSigna}] ${doctorNotes}`.trim() : doctorNotes,
         items: prescriptionItems.map(item => ({
           medicine_id: item.medicine_id,
           unit_selected: item.unit_selected,
           quantity_input: item.quantity_input,
-          dosage_instruction: item.dosage_instruction,
+          dosage_instruction: isRacikan ? racikanSigna : item.dosage_instruction,
+          is_racikan: isRacikan ? 1 : 0,
+          racikan_name: isRacikan ? `${racikanName} (${racikanQty} Bungkus)` : null,
           notes: item.notes
         }))
       };
@@ -245,6 +329,15 @@ export default function DoctorPortal({ activeSubTab }) {
       setSubmitting(false);
     }
   };
+
+  const filteredPatients = patients.filter(p => {
+    if (!patientSearchQuery.trim()) return true;
+    const q = patientSearchQuery.toLowerCase();
+    return (
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.medical_record_number && p.medical_record_number.toLowerCase().includes(q))
+    );
+  });
 
   const filteredMeds = medicines.filter(m => {
     const matchSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -271,7 +364,7 @@ export default function DoctorPortal({ activeSubTab }) {
                 </span>
               </div>
               <div className="text-slate-500 flex items-center gap-2">
-                <span>Usia: {calculateAge(selectedPatient?.birth_date) ?? '-'} Tahun ({selectedPatient?.gender === 'L' ? 'Laki-laki' : 'Perempuan'})</span>
+                <span>Usia: {calculateAge(selectedPatient?.date_of_birth || selectedPatient?.birth_date) ?? '-'} Tahun ({selectedPatient?.gender === 'L' ? 'Laki-laki' : 'Perempuan'})</span>
                 <span>•</span>
                 <span>Gol. Darah: {selectedPatient?.blood_type || 'O+'}</span>
                 <span>•</span>
@@ -286,22 +379,50 @@ export default function DoctorPortal({ activeSubTab }) {
                 </div>
               )}
 
-              <div className="flex items-center gap-1.5">
-                <span className="text-slate-500">Pasien:</span>
-                <select
-                  value={selectedPatient?.id || ''}
-                  onChange={(e) => {
-                    const p = patients.find(x => x.id === Number(e.target.value));
-                    if (p) setSelectedPatient(p);
-                  }}
-                  className="bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 font-medium"
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewPatientModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#155ea3] hover:bg-[#0f3d6b] text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer"
+                  title="Daftarkan atau masukkan nama pasien baru langsung"
                 >
-                  {patients.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.medical_record_number})
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>+ Pasien Baru</span>
+                </button>
+
+                <div className="flex items-center gap-1.5">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Cari pasien / RM..."
+                      value={patientSearchQuery}
+                      onChange={(e) => setPatientSearchQuery(e.target.value)}
+                      className="w-32 sm:w-40 pl-6 pr-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[#155ea3]"
+                    />
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-1.5 top-2 pointer-events-none" />
+                  </div>
+                  <select
+                    value={selectedPatient?.id || ''}
+                    onChange={(e) => {
+                      if (e.target.value === 'NEW_PATIENT') {
+                        setNewPatientModalOpen(true);
+                        return;
+                      }
+                      const p = patients.find(x => x.id === Number(e.target.value));
+                      if (p) setSelectedPatient(p);
+                    }}
+                    className="bg-white border border-slate-300 rounded px-2.5 py-1.5 text-slate-800 font-medium text-xs focus:outline-hidden focus:border-[#155ea3] max-w-[200px]"
+                  >
+                    <option value="NEW_PATIENT" className="font-bold text-[#155ea3]">
+                      + Ketik / Tambah Pasien Baru...
                     </option>
-                  ))}
-                </select>
+                    {filteredPatients.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.medical_record_number})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -386,11 +507,16 @@ export default function DoctorPortal({ activeSubTab }) {
                         <span className="text-slate-500">{med.breakdownText}</span>
 
                         {contra ? (
-                          <span className="text-[11px] font-bold text-rose-700">
+                          <span className="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded">
                             Kontraindikasi Alergi
+                          </span>
+                        ) : med.total_stock <= 0 ? (
+                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                            Stok Kosong
                           </span>
                         ) : (
                           <button
+                            type="button"
                             onClick={() => handleAddMedicine(med)}
                             className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded font-medium cursor-pointer transition text-xs"
                           >
@@ -438,89 +564,152 @@ export default function DoctorPortal({ activeSubTab }) {
                   </label>
                 </div>
 
-                {prescriptionType === 'standard' ? (
-                  <div className="space-y-2.5">
-                    {prescriptionItems.length === 0 ? (
-                      <div className="py-10 text-center text-slate-400 bg-slate-50 rounded border border-dashed border-slate-200 text-xs">
-                        Belum ada obat yang dipilih. Silakan pilih dari katalog di sebelah kiri.
+                {/* If Racikan is active, show the compound header configurator */}
+                {prescriptionType === 'racikan' && (
+                  <div className="p-3.5 bg-purple-50/70 rounded-xl border border-purple-200 space-y-2.5 text-xs">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-purple-100">
+                      <span className="font-bold text-purple-900 uppercase tracking-wide">
+                        Pengaturan Formula Racikan
+                      </span>
+                      <span className="text-[10px] text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full font-semibold">
+                        Puyer / Kapsul / Sirup Kering
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                      <div className="sm:col-span-8">
+                        <label className="text-slate-600 block mb-1 font-medium">Nama Formula Racikan:</label>
+                        <input
+                          type="text"
+                          value={racikanName}
+                          onChange={(e) => setRacikanName(e.target.value)}
+                          placeholder="Contoh: Puyer Batuk & Demam Anak"
+                          className="w-full bg-white border border-purple-200 rounded-lg px-2.5 py-1.5 text-slate-800 font-semibold focus:outline-hidden focus:border-purple-500"
+                        />
                       </div>
-                    ) : (
-                      prescriptionItems.map((item, idx) => (
-                        <div key={idx} className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2 text-xs">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-slate-500">{idx + 1}.</span>
-                              <span className="font-bold text-slate-900 text-xs">{item.medicine_name}</span>
-                              <span className="font-mono text-[11px] text-slate-400">({item.medicine_code})</span>
-                            </div>
-                            <button
-                              onClick={() => handleRemoveItem(idx)}
-                              className="text-slate-400 hover:text-rose-600 font-semibold cursor-pointer"
+                      <div className="sm:col-span-4">
+                        <label className="text-slate-600 block mb-1 font-medium">Jumlah Bungkus / Sachet:</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={racikanQty}
+                          onChange={(e) => setRacikanQty(Math.max(1, Number(e.target.value) || 1))}
+                          className="w-full bg-white border border-purple-200 rounded-lg px-2.5 py-1.5 font-bold text-center text-purple-900 focus:outline-hidden focus:border-purple-500"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-slate-600 block mb-1 font-medium">Aturan Pakai Racikan (Signa):</label>
+                      <input
+                        type="text"
+                        value={racikanSigna}
+                        onChange={(e) => setRacikanSigna(e.target.value)}
+                        placeholder="Contoh: 3 x 1 Bungkus Sesudah Makan"
+                        className="w-full bg-white border border-purple-200 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-hidden focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* List of Prescription Items (Used for Standard and as Ingredients for Racikan) */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                    <span>
+                      {prescriptionType === 'racikan' ? 'Komposisi Bahan Obat Racikan' : 'Daftar Obat Yang Diresepkan'}:
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      {prescriptionItems.length} bahan dipilih
+                    </span>
+                  </div>
+
+                  {prescriptionItems.length === 0 ? (
+                    <div className="py-10 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-xs">
+                      {prescriptionType === 'racikan'
+                        ? 'Pilih obat dari katalog di sebelah kiri untuk dimasukkan ke dalam formula racikan.'
+                        : 'Belum ada obat yang dipilih. Silakan pilih dari katalog di sebelah kiri.'}
+                    </div>
+                  ) : (
+                    prescriptionItems.map((item, idx) => (
+                      <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-500">{idx + 1}.</span>
+                            <span className="font-bold text-slate-900 text-xs">{item.medicine_name}</span>
+                            <span className="font-mono text-[11px] text-slate-400">({item.medicine_code})</span>
+                            {prescriptionType === 'racikan' && (
+                              <span className="px-1.5 py-0.2 bg-purple-100 text-purple-800 text-[10px] font-bold rounded">
+                                Bahan Racikan
+                              </span>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleRemoveItem(idx)}
+                            className="text-slate-400 hover:text-rose-600 font-semibold cursor-pointer"
+                          >
+                            Hapus
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                          <div className="sm:col-span-4">
+                            <label className="text-[10px] text-slate-500 block mb-0.5">Satuan Ambil:</label>
+                            <select
+                              value={item.unit_selected}
+                              onChange={(e) => handleUnitChange(idx, e.target.value)}
+                              className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 text-xs"
                             >
-                              Hapus
-                            </button>
+                              {item.availableUnits.map(u => (
+                                <option key={u.unit_name} value={u.unit_name}>
+                                  {u.unit_name} {u.conversion_ratio > 1 ? `(${u.conversion_ratio} ${item.base_unit})` : ''}
+                                </option>
+                              ))}
+                            </select>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                            <div className="sm:col-span-4">
-                              <label className="text-[10px] text-slate-500 block mb-0.5">Satuan:</label>
-                              <select
-                                value={item.unit_selected}
-                                onChange={(e) => handleUnitChange(idx, e.target.value)}
-                                className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-slate-800 text-xs"
+                          <div className="sm:col-span-4">
+                            <label className="text-[10px] text-slate-500 block mb-0.5">Jumlah Digunakan:</label>
+                            <div className="flex items-center bg-white border border-slate-300 rounded overflow-hidden">
+                              <button
+                                type="button"
+                                onClick={() => handleQtyChange(idx, -1)}
+                                className="px-2 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer"
                               >
-                                {item.availableUnits.map(u => (
-                                  <option key={u.unit_name} value={u.unit_name}>
-                                    {u.unit_name} {u.conversion_ratio > 1 ? `(${u.conversion_ratio} ${item.base_unit})` : ''}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="sm:col-span-4">
-                              <label className="text-[10px] text-slate-500 block mb-0.5">Jumlah:</label>
-                              <div className="flex items-center bg-white border border-slate-300 rounded overflow-hidden">
-                                <button
-                                  type="button"
-                                  onClick={() => handleQtyChange(idx, -1)}
-                                  className="px-2 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer"
-                                >
-                                  -
-                                </button>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={item.quantity_input}
-                                  onChange={(e) => {
-                                    const val = Math.max(1, Number(e.target.value) || 1);
-                                    const updated = [...prescriptionItems];
-                                    updated[idx] = {
-                                      ...item,
-                                      quantity_input: val,
-                                      quantity_base_unit: val * item.conversion_ratio
-                                    };
-                                    setPrescriptionItems(updated);
-                                  }}
-                                  className="w-full text-center py-1 text-xs font-semibold focus:outline-none"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleQtyChange(idx, 1)}
-                                  className="px-2 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer"
-                                >
-                                  +
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="sm:col-span-4">
-                              <label className="text-[10px] text-slate-500 block mb-0.5">Konversi Stok:</label>
-                              <div className="bg-white border border-slate-200 px-2 py-1 rounded text-slate-700 font-semibold text-center">
-                                {item.quantity_base_unit} {item.base_unit}
-                              </div>
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantity_input}
+                                onChange={(e) => {
+                                  const val = Math.max(1, Number(e.target.value) || 1);
+                                  const updated = [...prescriptionItems];
+                                  updated[idx] = {
+                                    ...item,
+                                    quantity_input: val,
+                                    quantity_base_unit: val * item.conversion_ratio
+                                  };
+                                  setPrescriptionItems(updated);
+                                }}
+                                className="w-full text-center py-1 text-xs font-semibold focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleQtyChange(idx, 1)}
+                                className="px-2 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer"
+                              >
+                                +
+                              </button>
                             </div>
                           </div>
 
+                          <div className="sm:col-span-4">
+                            <label className="text-[10px] text-slate-500 block mb-0.5">Konversi Stok:</label>
+                            <div className="bg-white border border-slate-200 px-2 py-1 rounded text-slate-700 font-semibold text-center">
+                              {item.quantity_base_unit} {item.base_unit}
+                            </div>
+                          </div>
+                        </div>
+
+                        {prescriptionType !== 'racikan' && (
                           <div>
                             <label className="text-[10px] text-slate-500 block mb-0.5">Aturan Pakai (Signa):</label>
                             <input
@@ -550,43 +739,11 @@ export default function DoctorPortal({ activeSubTab }) {
                               ))}
                             </div>
                           </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2 text-xs">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-slate-600 block mb-1">Nama Racikan:</label>
-                        <input
-                          type="text"
-                          value={racikanName}
-                          onChange={(e) => setRacikanName(e.target.value)}
-                          className="w-full bg-white border border-slate-300 rounded px-2 py-1"
-                        />
+                        )}
                       </div>
-                      <div>
-                        <label className="text-slate-600 block mb-1">Jumlah Bungkus:</label>
-                        <input
-                          type="number"
-                          value={racikanQty}
-                          onChange={(e) => setRacikanQty(Number(e.target.value))}
-                          className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-bold text-center"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-slate-600 block mb-1">Signa Racikan:</label>
-                      <input
-                        type="text"
-                        value={racikanSigna}
-                        onChange={(e) => setRacikanSigna(e.target.value)}
-                        className="w-full bg-white border border-slate-300 rounded px-2 py-1"
-                      />
-                    </div>
-                  </div>
-                )}
+                    ))
+                  )}
+                </div>
 
                 <div>
                   <label className="text-[10px] text-slate-500 block mb-0.5">Catatan Dokter:</label>
@@ -758,6 +915,173 @@ export default function DoctorPortal({ activeSubTab }) {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Input Pasien Baru */}
+      {newPatientModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="px-5 py-4 bg-gradient-to-r from-[#0f3d6b] to-[#155ea3] text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center">
+                  <UserPlus className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm">Input / Daftarkan Pasien Baru</h3>
+                  <p className="text-[11px] text-white/80">Masukkan data identitas pasien untuk memulai peresepan</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNewPatientModalOpen(false)}
+                className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body Form */}
+            <form onSubmit={handleCreatePatient} className="p-5 space-y-3.5 overflow-y-auto text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  Nama Lengkap Pasien <span className="text-[#ec1415]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={newPatientForm.name}
+                  onChange={(e) => setNewPatientForm({ ...newPatientForm, name: e.target.value })}
+                  placeholder="Contoh: Ny. Ratna Sari, Tn. Hendra..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs font-semibold focus:outline-hidden focus:border-[#155ea3] focus:ring-1 focus:ring-[#155ea3]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">Jenis Kelamin:</label>
+                  <select
+                    value={newPatientForm.gender}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, gender: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs bg-white focus:outline-hidden focus:border-[#155ea3]"
+                  >
+                    <option value="L">Laki-laki (L)</option>
+                    <option value="P">Perempuan (P)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">Tanggal Lahir:</label>
+                  <input
+                    type="date"
+                    value={newPatientForm.date_of_birth}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, date_of_birth: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs bg-white focus:outline-hidden focus:border-[#155ea3]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">Golongan Darah:</label>
+                  <select
+                    value={newPatientForm.blood_type}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, blood_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs bg-white"
+                  >
+                    {['O+', 'A+', 'B+', 'AB+', 'O-', 'A-', 'B-', 'AB-'].map(b => (
+                      <option key={b} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">Berat Badan (kg):</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    value={newPatientForm.weight_kg}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, weight_kg: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs bg-white font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">Penjamin / Asuransi:</label>
+                  <select
+                    value={newPatientForm.insurance_type}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, insurance_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs bg-white"
+                  >
+                    <option value="Umum">Umum / Mandiri</option>
+                    <option value="BPJS Mandiri">BPJS Mandiri</option>
+                    <option value="BPJS PBI">BPJS PBI</option>
+                    <option value="Asuransi Swasta">Asuransi Swasta</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">Nomor Telepon / WA:</label>
+                  <input
+                    type="text"
+                    value={newPatientForm.phone}
+                    onChange={(e) => setNewPatientForm({ ...newPatientForm, phone: e.target.value })}
+                    placeholder="08xx-xxxx-xxxx"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  Riwayat Alergi Obat:
+                </label>
+                <input
+                  type="text"
+                  value={newPatientForm.allergies}
+                  onChange={(e) => setNewPatientForm({ ...newPatientForm, allergies: e.target.value })}
+                  placeholder="Contoh: Penisilin / Beta-Laktam, Sulfa, Aspirin, atau Tidak Ada"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs font-semibold focus:outline-hidden focus:border-[#155ea3]"
+                />
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  <span className="text-[10px] text-slate-400 self-center">Pilihan cepat:</span>
+                  {['Tidak Ada', 'Penisilin / Golongan Beta-Laktam', 'Sulfa', 'Aspirin / NSAID'].map(al => (
+                    <button
+                      key={al}
+                      type="button"
+                      onClick={() => setNewPatientForm({ ...newPatientForm, allergies: al })}
+                      className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded text-[10px] cursor-pointer"
+                    >
+                      {al}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewPatientModalOpen(false)}
+                  className="px-3.5 py-2 text-slate-600 hover:text-slate-800 font-medium rounded-lg text-xs hover:bg-slate-100 transition cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingPatient}
+                  className="px-4 py-2 bg-[#155ea3] hover:bg-[#0f3d6b] text-white text-xs font-bold rounded-xl shadow-md hover:shadow-lg transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>{isCreatingPatient ? 'Mendaftarkan...' : 'Simpan & Mulai Resep'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

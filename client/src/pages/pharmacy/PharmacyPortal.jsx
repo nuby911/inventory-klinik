@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
-import { useSocket } from '../../context/SocketContext';
-import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/useSocket';
+import { useAuth } from '../../context/useAuth';
 import EtiketModal from '../../components/pharmacy/EtiketModal';
 
 export default function PharmacyPortal({ activeSubTab }) {
@@ -45,22 +45,7 @@ export default function PharmacyPortal({ activeSubTab }) {
   });
   const [damageHistory, setDamageHistory] = useState([]);
 
-  const loadPrescriptions = async () => {
-    try {
-      setLoading(true);
-      const res = await api.getPrescriptions();
-      setPrescriptions(res.data);
-      if (res.data.length > 0 && !selectedRx) {
-        loadRxDetail(res.data[0].id);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadRxDetail = async (id) => {
+  const loadRxDetail = React.useCallback(async (id) => {
     try {
       const res = await api.getPrescriptionById(id);
       setSelectedRx(res.data);
@@ -74,9 +59,24 @@ export default function PharmacyPortal({ activeSubTab }) {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, []);
 
-  const loadInventoryAlerts = async () => {
+  const loadPrescriptions = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await api.getPrescriptions();
+      setPrescriptions(res.data);
+      if (res.data.length > 0 && !selectedRx) {
+        loadRxDetail(res.data[0].id);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedRx, loadRxDetail]);
+
+  const loadInventoryAlerts = React.useCallback(async () => {
     try {
       const [expRes, medsRes, batchRes, adjRes] = await Promise.all([
         api.getExpiringBatches(60),
@@ -94,42 +94,52 @@ export default function PharmacyPortal({ activeSubTab }) {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [damageForm.batch_id]);
 
   useEffect(() => {
     loadPrescriptions();
     loadInventoryAlerts();
-  }, []);
+  }, [loadPrescriptions, loadInventoryAlerts]);
+
+  const selectedRxRef = React.useRef(selectedRx);
+  useEffect(() => {
+    selectedRxRef.current = selectedRx;
+  }, [selectedRx]);
 
   useEffect(() => {
     if (!socket) return;
     const handleNewRx = (newRx) => {
       setPrescriptions(prev => [newRx, ...prev.filter(p => p.id !== newRx.id)]);
-      if (!selectedRx) loadRxDetail(newRx.id);
+      if (!selectedRxRef.current) loadRxDetail(newRx.id);
     };
     const handleStatusChanged = ({ id, status }) => {
       setPrescriptions(prev => prev.map(p => p.id === id ? { ...p, status } : p));
-      if (selectedRx && selectedRx.id === id) {
+      if (selectedRxRef.current && selectedRxRef.current.id === id) {
         setSelectedRx(prev => ({ ...prev, status }));
       }
     };
     const handleDispensed = (data) => {
       setPrescriptions(prev => prev.map(p => p.id === data.prescriptionId ? { ...p, status: 'completed' } : p));
-      if (selectedRx && selectedRx.id === data.prescriptionId) {
+      if (selectedRxRef.current && selectedRxRef.current.id === data.prescriptionId) {
         setSelectedRx(prev => ({ ...prev, status: 'completed' }));
       }
+    };
+    const handleStockUpdated = () => {
+      loadInventoryAlerts();
     };
 
     socket.on('prescription:new', handleNewRx);
     socket.on('prescription:status_changed', handleStatusChanged);
     socket.on('prescription:dispensed', handleDispensed);
+    socket.on('stock:updated', handleStockUpdated);
 
     return () => {
       socket.off('prescription:new', handleNewRx);
       socket.off('prescription:status_changed', handleStatusChanged);
       socket.off('prescription:dispensed', handleDispensed);
+      socket.off('stock:updated', handleStockUpdated);
     };
-  }, [socket, selectedRx]);
+  }, [socket, loadInventoryAlerts, loadRxDetail]);
 
   const handleStartPreparing = async () => {
     if (!selectedRx) return;
@@ -376,7 +386,14 @@ export default function PharmacyPortal({ activeSubTab }) {
                       <div key={idx} className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
                         <div className="flex items-start justify-between">
                           <div>
-                            <div className="font-bold text-slate-900">{item.medicine_name}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900">{item.medicine_name}</span>
+                              {Boolean(item.is_racikan) && (
+                                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-bold rounded">
+                                  Racikan: {item.racikan_name || 'Formula Puyer'}
+                                </span>
+                              )}
+                            </div>
                             <div className="text-slate-500 text-[11px] mt-0.5">
                               Kebutuhan: <b>{item.quantity_input} {item.unit_selected}</b> ({item.quantity_base_unit} {item.base_unit}) • Lokasi: {item.rack_location || 'Rak Utama'}
                             </div>

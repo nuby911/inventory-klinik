@@ -47,10 +47,10 @@ function getAdjustmentKpis(req, res) {
     res.json({
       success: true,
       data: {
-        returSupplierCount: returCount || 14,
-        damagedCount: damagedCount || 6,
-        disposalCount: disposalCount || 2,
-        opnameAccuracy: '99.2%'
+        returSupplierCount: returCount,
+        damagedCount: damagedCount,
+        disposalCount: disposalCount,
+        opnameAdjustmentCount: opnameCount
       }
     });
   } catch (error) {
@@ -61,10 +61,24 @@ function getAdjustmentKpis(req, res) {
 
 function createAdjustment(req, res) {
   try {
-    const { batch_id, user_id, adjustment_type, unit_selected, quantity_input, reason, distributor } = req.body;
+    const { batch_id, adjustment_type, unit_selected, quantity_input, reason, distributor } = req.body;
+    const user_id = req.user?.id || req.body.user_id || 2;
 
     if (!batch_id || !adjustment_type || !quantity_input || !reason) {
       return res.status(400).json({ success: false, message: 'Batch, jenis penyesuaian, kuantitas, dan alasan wajib diisi' });
+    }
+
+    const ALLOWED_TYPES = ['retur_supplier', 'damaged', 'expired_disposal', 'stock_opname_adjustment'];
+    if (!ALLOWED_TYPES.includes(adjustment_type)) {
+      return res.status(400).json({
+        success: false,
+        message: `Jenis penyesuaian tidak valid ('${adjustment_type}'). Pilih salah satu dari: ${ALLOWED_TYPES.join(', ')}`
+      });
+    }
+
+    const qtyNumber = Number(quantity_input);
+    if (isNaN(qtyNumber) || qtyNumber <= 0) {
+      return res.status(400).json({ success: false, message: 'Kuantitas penyesuaian harus berupa angka positif lebih besar dari 0' });
     }
 
     const batch = db.prepare(`
@@ -79,7 +93,7 @@ function createAdjustment(req, res) {
     }
 
     const unit = unit_selected || batch.base_unit;
-    const qtyBase = convertToBaseUnit(batch.medicine_id, unit, Number(quantity_input));
+    const qtyBase = convertToBaseUnit(batch.medicine_id, unit, qtyNumber);
 
     if (qtyBase > batch.stock_qty) {
       return res.status(400).json({
@@ -88,17 +102,28 @@ function createAdjustment(req, res) {
       });
     }
 
-    // Generate unique reference code
-    const count = db.prepare('SELECT COUNT(*) as count FROM stock_adjustments').get().count + 1;
+    // Generate collision-safe reference code
+    const maxIdRow = db.prepare('SELECT MAX(id) as maxId FROM stock_adjustments').get();
+    const nextNum = (maxIdRow?.maxId || 0) + 1;
     const year = new Date().getFullYear();
-    const adjustment_code = `ADJ-${year}-${String(count).padStart(4, '0')}`;
+    let adjustment_code = `ADJ-${year}-${String(nextNum).padStart(4, '0')}`;
+    const existingCode = db.prepare('SELECT id FROM stock_adjustments WHERE adjustment_code = ?').get(adjustment_code);
+    if (existingCode) {
+      adjustment_code = `ADJ-${year}-${String(nextNum).padStart(4, '0')}-${Math.floor(100 + Math.random() * 900)}`;
+    }
 
     const executeTx = db.transaction(() => {
-      // Deduct from batch
-      db.prepare('UPDATE medicine_batches SET stock_qty = stock_qty - ? WHERE id = ?').run(qtyBase, batch_id);
+      // Deduct from batch with negative stock defense
+      const batchUpdate = db.prepare('UPDATE medicine_batches SET stock_qty = stock_qty - ? WHERE id = ? AND stock_qty >= ?').run(qtyBase, batch_id, qtyBase);
+      if (batchUpdate.changes === 0) {
+        throw new Error('Gagal memotong stok batch: sisa stok tidak mencukupi.');
+      }
 
       // Deduct from medicine total stock
-      db.prepare('UPDATE medicines SET total_stock = total_stock - ? WHERE id = ?').run(qtyBase, batch.medicine_id);
+      const medUpdate = db.prepare('UPDATE medicines SET total_stock = total_stock - ? WHERE id = ? AND total_stock >= ?').run(qtyBase, batch.medicine_id, qtyBase);
+      if (medUpdate.changes === 0) {
+        throw new Error('Gagal memotong stok master: sisa stok master tidak mencukupi.');
+      }
 
       // Insert adjustment log
       const insertStmt = db.prepare(`
@@ -108,7 +133,7 @@ function createAdjustment(req, res) {
       `).run(
         adjustment_code,
         batch_id,
-        user_id || 2,
+        user_id,
         adjustment_type,
         qtyBase,
         reason,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   FileText,
   AlertTriangle,
@@ -10,7 +10,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { api } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
+import { useSocket } from '../../context/useSocket';
 
 function timeAgo(dateStr) {
   if (!dateStr) return '-';
@@ -24,6 +25,7 @@ function timeAgo(dateStr) {
 
 export default function DashboardAnalytics({ setActiveSubTab }) {
   const { currentUser } = useAuth();
+  const { socket } = useSocket();
   const role = currentUser?.role;
 
   const [prescriptions, setPrescriptions] = useState([]);
@@ -35,7 +37,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     try {
       const [rxRes, medRes, expRes, adjRes] = await Promise.all([
@@ -54,11 +56,31 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
+
+  // Real-time synchronization for dashboard
+  useEffect(() => {
+    if (!socket) return;
+    const handleRefresh = () => {
+      fetchDashboardData();
+    };
+
+    socket.on('prescription:new', handleRefresh);
+    socket.on('prescription:status_changed', handleRefresh);
+    socket.on('prescription:dispensed', handleRefresh);
+    socket.on('stock:updated', handleRefresh);
+
+    return () => {
+      socket.off('prescription:new', handleRefresh);
+      socket.off('prescription:status_changed', handleRefresh);
+      socket.off('prescription:dispensed', handleRefresh);
+      socket.off('stock:updated', handleRefresh);
+    };
+  }, [socket, fetchDashboardData]);
 
   // Metrik Utama
   const metrics = useMemo(() => {
@@ -120,9 +142,9 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
   return (
     <div className="space-y-6 pb-12">
       {/* Header Halaman (Sederhana, Bersih, Profesional) */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-[#d4e7f3]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-slate-200">
         <div>
-          <h1 className="text-xl font-bold text-[#030879] tracking-tight">Ringkasan Operasional</h1>
+          <h1 className="text-xl font-bold text-[#0f3d6b] tracking-tight">Ringkasan Operasional</h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Status terkini antrean resep dan pemantauan stok obat klinik.
           </p>
@@ -131,7 +153,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
             onClick={fetchDashboardData}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#030879] bg-white border border-[#cbe2f0] rounded-full hover:bg-[#edf6fb] transition cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#155ea3] bg-white border border-slate-200 rounded-full hover:bg-blue-50 transition cursor-pointer shadow-2xs"
             title="Muat ulang data"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -141,7 +163,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
           {role === 'dokter' && (
             <button
               onClick={() => setActiveSubTab('write_prescription')}
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#030879] hover:bg-[#020557] rounded-full transition shadow-xs cursor-pointer"
+              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#155ea3] hover:bg-[#0f3d6b] rounded-full transition shadow-xs cursor-pointer"
             >
               Tulis E-Resep
             </button>
@@ -150,7 +172,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
           {role === 'apoteker' && (
             <button
               onClick={() => setActiveSubTab('queue_dispensing')}
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#030879] hover:bg-[#020557] rounded-full transition shadow-xs cursor-pointer"
+              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#155ea3] hover:bg-[#0f3d6b] rounded-full transition shadow-xs cursor-pointer"
             >
               Buka Antrean Farmasi
             </button>
@@ -159,7 +181,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
           {role === 'admin' && (
             <button
               onClick={() => setActiveSubTab('inventory_master')}
-              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#030879] hover:bg-[#020557] rounded-full transition shadow-xs cursor-pointer"
+              className="px-4 py-1.5 text-xs font-semibold text-white bg-[#155ea3] hover:bg-[#0f3d6b] rounded-full transition shadow-xs cursor-pointer"
             >
               Kelola Master Obat
             </button>
@@ -170,10 +192,10 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
       {/* 4 Kartu Metrik Utama (Flat, High Contrast, Elegan) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metrik 1: Antrean Menunggu */}
-        <div className="bg-white p-4.5 rounded-2xl border border-[#d4e7f3] shadow-2xs">
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Resep Menunggu</span>
-            <Clock className="w-4 h-4 text-[#1b8ebc]" />
+            <Clock className="w-4 h-4 text-[#155ea3]" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-bold text-slate-900">{metrics.pending}</span>
@@ -188,27 +210,27 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
         <div className={`p-4.5 rounded-2xl border shadow-2xs ${
           metrics.cito > 0 
             ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-500/20' 
-            : 'bg-white border-[#d4e7f3]'
+            : 'bg-white border-slate-200'
         }`}>
           <div className="flex items-center justify-between">
-            <span className={`text-xs ${metrics.cito > 0 ? 'text-rose-700 font-bold' : 'text-slate-500 font-semibold'}`}>
+            <span className={`text-xs ${metrics.cito > 0 ? 'text-[#ec1415] font-bold' : 'text-slate-500 font-semibold'}`}>
               Resep CITO (Darurat)
             </span>
-            <AlertTriangle className={`w-4 h-4 ${metrics.cito > 0 ? 'text-rose-600' : 'text-slate-400'}`} />
+            <AlertTriangle className={`w-4 h-4 ${metrics.cito > 0 ? 'text-[#ec1415]' : 'text-slate-400'}`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className={`text-2xl font-bold ${metrics.cito > 0 ? 'text-rose-700' : 'text-slate-900'}`}>
+            <span className={`text-2xl font-bold ${metrics.cito > 0 ? 'text-[#ec1415]' : 'text-slate-900'}`}>
               {metrics.cito}
             </span>
-            <span className={`text-xs ${metrics.cito > 0 ? 'text-rose-600' : 'text-slate-500'}`}>resep aktif</span>
+            <span className={`text-xs ${metrics.cito > 0 ? 'text-[#ec1415]' : 'text-slate-500'}`}>resep aktif</span>
           </div>
-          <div className={`mt-2 text-[11px] ${metrics.cito > 0 ? 'text-rose-700 font-medium' : 'text-slate-500'}`}>
+          <div className={`mt-2 text-[11px] ${metrics.cito > 0 ? 'text-[#ec1415] font-medium' : 'text-slate-500'}`}>
             {metrics.cito > 0 ? 'Harus segera diprioritaskan' : 'Tidak ada antrean darurat'}
           </div>
         </div>
 
         {/* Metrik 3: Selesai Hari Ini */}
-        <div className="bg-white p-4.5 rounded-2xl border border-[#d4e7f3] shadow-2xs">
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Selesai Diserahkan</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -223,10 +245,10 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
         </div>
 
         {/* Metrik 4: Peringatan Stok & ED */}
-        <div className="bg-white p-4.5 rounded-2xl border border-[#d4e7f3] shadow-2xs">
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Stok Kritis / Dekat ED</span>
-            <Pill className="w-4 h-4 text-[#1b8ebc]" />
+            <Pill className="w-4 h-4 text-[#155ea3]" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className={`text-2xl font-bold ${
@@ -262,15 +284,15 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
                   onClick={() => setStatusFilter(tab.id)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
                     statusFilter === tab.id
-                      ? 'bg-[#060eff] text-white shadow-xs'
-                      : 'text-slate-600 hover:bg-[#e0f2fe]/70 hover:text-[#030879]'
+                      ? 'bg-[#155ea3] text-white shadow-xs'
+                      : 'text-slate-600 hover:bg-blue-50 hover:text-[#155ea3]'
                   }`}
                 >
                   <span>{tab.label}</span>
                   <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                     statusFilter === tab.id 
                       ? 'bg-white/20 text-white' 
-                      : tab.alert ? 'bg-rose-100 text-rose-700 font-bold' : 'bg-slate-200 text-slate-600'
+                      : tab.alert ? 'bg-rose-100 text-[#ec1415] font-bold' : 'bg-slate-200 text-slate-600'
                   }`}>
                     {tab.count}
                   </span>
@@ -286,7 +308,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
                 placeholder="Cari pasien / RM / resep..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-[#cbe2f0] rounded-full focus:outline-hidden focus:border-[#060eff] focus:ring-1 focus:ring-[#060eff]"
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-full focus:outline-hidden focus:border-[#155ea3] focus:ring-1 focus:ring-[#155ea3]"
               />
             </div>
           </div>
@@ -317,7 +339,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
                         <div className="flex items-center gap-1.5">
                           <span>{rx.prescription_code}</span>
                           {rx.is_cito === 1 && (
-                            <span className="px-1 py-0.2 bg-rose-600 text-white text-[9px] font-bold rounded">
+                            <span className="px-1.5 py-0.5 bg-[#ec1415] text-white text-[9px] font-bold rounded">
                               CITO
                             </span>
                           )}
@@ -348,7 +370,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
                           rx.status === 'pending'
                             ? 'bg-amber-100 text-amber-800'
                             : rx.status === 'preparing'
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'bg-blue-100 text-[#155ea3]'
                             : 'bg-emerald-100 text-emerald-800'
                         }`}>
                           {rx.status === 'pending' ? 'Menunggu' : rx.status === 'preparing' ? 'Diracik' : 'Selesai'}
@@ -366,7 +388,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
             {role === 'apoteker' && (
               <button
                 onClick={() => setActiveSubTab('queue_dispensing')}
-                className="text-[#030879] font-semibold hover:text-[#060eff] hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-[#155ea3] font-semibold hover:text-[#0f3d6b] hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <span>Buka Ruang Peracikan</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -379,15 +401,15 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
         <div className="lg:col-span-4 space-y-4">
           
           {/* Card: Stok Obat Kritis */}
-          <div className="bg-white rounded-2xl border border-[#d4e7f3] shadow-2xs overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
             <div className="px-4 py-3 border-b border-[#e2eef6] flex items-center justify-between bg-[#f8fbfe]">
-              <h2 className="text-xs font-bold text-[#030879] uppercase tracking-wider">
+              <h2 className="text-xs font-bold text-[#0f3d6b] uppercase tracking-wider">
                 Stok Menipis / Kritis
               </h2>
               {role === 'admin' && (
                 <button
                   onClick={() => setActiveSubTab('inventory_master')}
-                  className="text-[11px] text-[#0284c7] hover:text-[#030879] cursor-pointer font-semibold"
+                  className="text-[11px] text-[#155ea3] hover:text-[#0f3d6b] cursor-pointer font-semibold"
                 >
                   Semua
                 </button>
@@ -425,12 +447,12 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
           </div>
 
           {/* Card: Batch Mendekati Kadaluwarsa (<60 Hari) */}
-          <div className="bg-white rounded-2xl border border-[#d4e7f3] shadow-2xs overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
             <div className="px-4 py-3 border-b border-[#e2eef6] flex items-center justify-between bg-[#f8fbfe]">
-              <h2 className="text-xs font-bold text-[#030879] uppercase tracking-wider">
+              <h2 className="text-xs font-bold text-[#0f3d6b] uppercase tracking-wider">
                 Kadaluwarsa Terdekat
               </h2>
-              <span className="text-[11px] font-semibold text-[#1b8ebc] bg-[#e0f2fe] px-2 py-0.5 rounded-full">{expiringBatches.length} batch</span>
+              <span className="text-[11px] font-semibold text-[#155ea3] bg-blue-50 px-2 py-0.5 rounded-full">{expiringBatches.length} batch</span>
             </div>
 
             <div className="divide-y divide-slate-100 text-xs">

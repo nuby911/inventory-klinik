@@ -1,5 +1,24 @@
 const db = require('../config/database');
-const { formatMultiUnitBreakdown } = require('../services/fefoService');
+const { formatMultiUnitBreakdownFromUnits } = require('../services/fefoService');
+
+// Precompiled statements compiled ONCE at module load
+const stmtUnitsByMed = db.prepare(`
+  SELECT medicine_id, unit_name, conversion_ratio, is_base_unit 
+  FROM medicine_units 
+  ORDER BY medicine_id, conversion_ratio DESC
+`);
+
+const stmtNearestBatches = db.prepare(`
+  WITH RankedBatches AS (
+    SELECT medicine_id, batch_number, expired_date, stock_qty,
+           ROW_NUMBER() OVER (PARTITION BY medicine_id ORDER BY expired_date ASC) as rn
+    FROM medicine_batches
+    WHERE stock_qty > 0
+  )
+  SELECT medicine_id, batch_number, expired_date, stock_qty
+  FROM RankedBatches
+  WHERE rn = 1
+`);
 
 function getMedicines(req, res) {
   try {
@@ -22,22 +41,31 @@ function getMedicines(req, res) {
 
     const medicines = db.prepare(query).all(...params);
 
-    const enriched = medicines.map(med => {
-      // Get units
-      const units = db.prepare(`
-        SELECT unit_name, conversion_ratio, is_base_unit 
-        FROM medicine_units 
-        WHERE medicine_id = ? 
-        ORDER BY conversion_ratio DESC
-      `).all(med.id);
+    if (medicines.length === 0) {
+      return res.json({ success: true, data: [] });
+    }
 
-      // Get nearest expiry batch
-      const nearestBatch = db.prepare(`
-        SELECT batch_number, expired_date, stock_qty 
-        FROM medicine_batches 
-        WHERE medicine_id = ? AND stock_qty > 0 
-        ORDER BY expired_date ASC LIMIT 1
-      `).get(med.id);
+    // 1. Batch load all units in ONE query and group into Map
+    const allUnits = stmtUnitsByMed.all();
+    const unitsMap = new Map();
+    for (const u of allUnits) {
+      if (!unitsMap.has(u.medicine_id)) unitsMap.set(u.medicine_id, []);
+      unitsMap.get(u.medicine_id).push(u);
+    }
+
+    // 2. Batch load nearest expiring batch in ONE query using SQLite Window Function
+    const allNearestBatches = stmtNearestBatches.all();
+    const batchesMap = new Map();
+    for (const b of allNearestBatches) {
+      batchesMap.set(b.medicine_id, b);
+    }
+
+    const now = Date.now();
+    const msInDay = 1000 * 60 * 60 * 24;
+
+    const enriched = medicines.map(med => {
+      const units = unitsMap.get(med.id) || [];
+      const nearestBatch = batchesMap.get(med.id) || null;
 
       // Calculate stock status
       let stockStatus = 'Aman';
@@ -51,15 +79,14 @@ function getMedicines(req, res) {
 
       // Check if nearest batch is expiring within 60 days
       const isExpiringSoon = nearestBatch ? (() => {
-        const diffTime = new Date(nearestBatch.expired_date) - new Date();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays <= 60;
+        const diffTime = new Date(nearestBatch.expired_date).getTime() - now;
+        return Math.ceil(diffTime / msInDay) <= 60;
       })() : false;
 
       return {
         ...med,
         units,
-        breakdownText: formatMultiUnitBreakdown(med.id, med.total_stock),
+        breakdownText: formatMultiUnitBreakdownFromUnits(units, med.base_unit, med.total_stock),
         stockStatus,
         isExpiringSoon,
         nearestBatch
@@ -95,7 +122,7 @@ function getMedicineById(req, res) {
         ...medicine,
         units,
         batches,
-        breakdownText: formatMultiUnitBreakdown(medicine.id, medicine.total_stock)
+        breakdownText: formatMultiUnitBreakdownFromUnits(units, medicine.base_unit, medicine.total_stock)
       }
     });
   } catch (error) {
@@ -108,15 +135,43 @@ function createMedicine(req, res) {
   try {
     const { code, name, category, base_unit, min_stock_alert, rack_location, contraindications, bpom_nie, barcode, units } = req.body;
 
-    if (!code || !name || !base_unit) {
+    if (!code || !name || !base_unit || !code.trim() || !name.trim() || !base_unit.trim()) {
       return res.status(400).json({ success: false, message: 'Kode, nama, dan satuan dasar (base unit) wajib diisi' });
+    }
+
+    const trimmedCode = code.trim().toUpperCase();
+    const trimmedName = name.trim();
+    const trimmedBaseUnit = base_unit.trim();
+
+    const existing = db.prepare('SELECT id FROM medicines WHERE code = ?').get(trimmedCode);
+    if (existing) {
+      return res.status(409).json({ success: false, message: `Kode obat '${trimmedCode}' sudah terdaftar dalam master obat klinik.` });
+    }
+
+    const ALLOWED_CATEGORIES = ['padat', 'cair', 'salep', 'injeksi'];
+    const resolvedCategory = (category || 'padat').toLowerCase().trim();
+    if (!ALLOWED_CATEGORIES.includes(resolvedCategory)) {
+      return res.status(400).json({
+        success: false,
+        message: `Kategori sediaan tidak valid ('${category}'). Pilih salah satu dari: ${ALLOWED_CATEGORIES.join(', ')}`
+      });
     }
 
     const insertTx = db.transaction(() => {
       const info = db.prepare(`
         INSERT INTO medicines (code, name, category, base_unit, total_stock, min_stock_alert, rack_location, contraindications, bpom_nie, barcode)
         VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
-      `).run(code, name, category || 'padat', base_unit, min_stock_alert || 10, rack_location || 'Rak Umum', contraindications || null, bpom_nie || null, barcode || null);
+      `).run(
+        trimmedCode,
+        trimmedName,
+        resolvedCategory,
+        trimmedBaseUnit,
+        min_stock_alert ? Math.max(0, Number(min_stock_alert)) : 10,
+        (rack_location && rack_location.trim()) || 'Rak Umum',
+        contraindications?.trim() || null,
+        bpom_nie?.trim() || null,
+        barcode?.trim() || null
+      );
 
       const medId = info.lastInsertRowid;
 
@@ -124,7 +179,7 @@ function createMedicine(req, res) {
       db.prepare(`
         INSERT INTO medicine_units (medicine_id, unit_name, conversion_ratio, is_base_unit)
         VALUES (?, ?, 1, 1)
-      `).run(medId, base_unit);
+      `).run(medId, trimmedBaseUnit);
 
       // Insert extra units
       if (units && Array.isArray(units)) {
@@ -133,8 +188,8 @@ function createMedicine(req, res) {
           VALUES (?, ?, ?, 0)
         `);
         for (const u of units) {
-          if (u.unit_name && u.unit_name.toLowerCase() !== base_unit.toLowerCase() && u.conversion_ratio > 1) {
-            insertUnit.run(medId, u.unit_name, u.conversion_ratio);
+          if (u.unit_name && u.unit_name.toLowerCase() !== trimmedBaseUnit.toLowerCase() && Number(u.conversion_ratio) > 1) {
+            insertUnit.run(medId, u.unit_name.trim(), Number(u.conversion_ratio));
           }
         }
       }

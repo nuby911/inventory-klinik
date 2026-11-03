@@ -13,7 +13,7 @@ import {
   Activity
 } from 'lucide-react';
 import { api } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 export default function ReportRecapView() {
   const { currentUser } = useAuth();
@@ -163,18 +163,18 @@ export default function ReportRecapView() {
       `}</style>
 
       {/* Header & Controls Bar */}
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-[#e2eef6] shadow-xs no-print">
+      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-xs no-print">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#eaf4fb] text-[#0284c7] text-xs font-bold tracking-wide">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#e8f2fc] text-[#155ea3] text-xs font-bold tracking-wide">
               <BarChart3 className="w-3.5 h-3.5" />
-              <span>SIM Farmasi Almedika — Modul Rekapitulasi</span>
+              <span>SIM Farmasi Klinik ELMedika — Modul Rekapitulasi</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-[#030879] tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-black text-[#0f3d6b] tracking-tight">
               Rekap & Laporan Operasional
             </h1>
             <p className="text-xs text-slate-500 font-medium">
-              Ringkasan peresepan, pelayanan farmasi, dan mutasi obat untuk periode: <span className="font-bold text-[#0284c7]">{getPeriodLabel()}</span>
+              Ringkasan peresepan, pelayanan farmasi, dan mutasi obat untuk periode: <span className="font-bold text-[#155ea3]">{getPeriodLabel()}</span>
             </p>
           </div>
 
@@ -182,15 +182,15 @@ export default function ReportRecapView() {
           <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#299dc9] text-[#0284c7] hover:bg-[#eaf4fb] text-xs font-bold shadow-xs transition cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#155ea3] text-[#155ea3] hover:bg-blue-50 text-xs font-bold shadow-xs transition cursor-pointer"
             >
-              <Printer className="w-4 h-4 text-[#0284c7]" />
+              <Printer className="w-4 h-4 text-[#155ea3]" />
               <span>Cetak PDF</span>
             </button>
 
             <button
               onClick={handleExportCSV}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#060eff] hover:bg-[#030879] text-white text-xs font-bold shadow-md shadow-blue-700/20 transition cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#155ea3] hover:bg-[#0f3d6b] text-white text-xs font-bold shadow-md shadow-blue-900/20 transition cursor-pointer"
             >
               <Download className="w-4 h-4 text-white" />
               <span>Unduh CSV / Excel</span>
@@ -201,13 +201,13 @@ export default function ReportRecapView() {
         {/* Filter Period Bar */}
         <div className="mt-5 pt-4 border-t border-[#e2eef6] flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Period Selector Tabs */}
-          <div className="inline-flex p-1 bg-[#f0f7fb] rounded-xl border border-[#d4e7f3]">
+          <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200">
             <button
               onClick={() => setPeriod('daily')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 period === 'daily'
-                  ? 'bg-white text-[#030879] shadow-xs'
-                  : 'text-slate-600 hover:text-[#030879]'
+                  ? 'bg-white text-[#155ea3] shadow-xs'
+                  : 'text-slate-600 hover:text-[#155ea3]'
               }`}
             >
               Harian (Hari Ini)
@@ -217,8 +217,8 @@ export default function ReportRecapView() {
               onClick={() => setPeriod('weekly')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 period === 'weekly'
-                  ? 'bg-white text-[#030879] shadow-xs'
-                  : 'text-slate-600 hover:text-[#030879]'
+                  ? 'bg-white text-[#155ea3] shadow-xs'
+                  : 'text-slate-600 hover:text-[#155ea3]'
               }`}
             >
               Mingguan (7 Hari)
@@ -228,8 +228,8 @@ export default function ReportRecapView() {
               onClick={() => setPeriod('monthly')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 period === 'monthly'
-                  ? 'bg-white text-[#030879] shadow-xs'
-                  : 'text-slate-600 hover:text-[#030879]'
+                  ? 'bg-white text-[#155ea3] shadow-xs'
+                  : 'text-slate-600 hover:text-[#155ea3]'
               }`}
             >
               Bulanan (30 Hari)
@@ -239,8 +239,8 @@ export default function ReportRecapView() {
               onClick={() => setPeriod('all')}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                 period === 'all'
-                  ? 'bg-white text-[#030879] shadow-xs'
-                  : 'text-slate-600 hover:text-[#030879]'
+                  ? 'bg-white text-[#155ea3] shadow-xs'
+                  : 'text-slate-600 hover:text-[#155ea3]'
               }`}
             >
               Semua Periode
@@ -257,15 +257,15 @@ export default function ReportRecapView() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-white border border-[#d4e7f3] text-slate-800 text-xs rounded-xl px-3 py-1.5 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#0284c7]/40 shadow-2xs"
+                className="bg-white border border-slate-200 text-slate-800 text-xs rounded-xl px-3 py-1.5 font-semibold focus:outline-hidden focus:ring-2 focus:ring-[#155ea3]/40 shadow-2xs"
               />
             </div>
             <button
               onClick={fetchReport}
               title="Perbarui Data"
-              className="p-2 rounded-xl border border-[#d4e7f3] bg-white hover:bg-slate-50 text-slate-600 transition cursor-pointer"
+              className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition cursor-pointer"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#0284c7]' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#155ea3]' : ''}`} />
             </button>
           </div>
         </div>
@@ -284,16 +284,19 @@ export default function ReportRecapView() {
         {/* Printable Official Header (Shown during print) */}
         <div className="hidden print:block border-b-2 border-slate-900 pb-4 mb-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-black uppercase tracking-wider text-slate-900">
-                KLINIK UTAMA ALMEDIKA
-              </h2>
-              <p className="text-xs text-slate-600">
-                Instalasi Farmasi & Pelayanan Rawat Jalan Terpadu
-              </p>
-              <p className="text-[11px] text-slate-500">
-                Jl. Pemuda No. 45, Telp: (0727) 321889 — Bandar Lampung
-              </p>
+            <div className="flex items-center gap-3.5">
+              <img src="/logo-badge.png" alt="Logo Klinik" className="w-16 h-16 object-contain shrink-0" />
+              <div>
+                <h2 className="text-xl font-black uppercase tracking-wider text-slate-900">
+                  KLINIK ELMEDIKA · RUMAH SUNAT ELNARA
+                </h2>
+                <p className="text-xs text-slate-600 font-semibold">
+                  Praktek Dokter & Rumah Sunat Modern — SIM Farmasi & Rawat Jalan Terpadu
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Jl. Pemuda No. 45, Telp: (0727) 321889 — Bandar Lampung · Nyaman, Modern, Profesional
+                </p>
+              </div>
             </div>
             <div className="text-right">
               <div className="text-xs font-bold text-slate-800 uppercase">
@@ -312,19 +315,19 @@ export default function ReportRecapView() {
         {/* 4 Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Total Prescriptions */}
-          <div className="bg-white rounded-2xl p-5 border border-[#e2eef6] shadow-xs flex items-center justify-between">
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Total E-Resep
               </span>
-              <div className="text-2xl font-black text-[#030879]">
+              <div className="text-2xl font-black text-[#0f3d6b]">
                 {metrics.totalPrescriptions}
               </div>
               <div className="text-[11px] text-slate-500 font-medium">
                 Resep masuk dalam periode
               </div>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-[#eaf4fb] text-[#0284c7] flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 text-[#155ea3] flex items-center justify-center shrink-0">
               <FileText className="w-6 h-6" />
             </div>
           </div>
@@ -395,7 +398,7 @@ export default function ReportRecapView() {
           <div className="bg-white rounded-2xl p-5 sm:p-6 border border-[#e2eef6] shadow-xs">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Pill className="w-4 h-4 text-[#0284c7]" />
+                <Pill className="w-4 h-4 text-[#155ea3]" />
                 <h2 className="text-sm font-bold text-slate-900">
                   Obat Paling Banyak Diresepkan
                 </h2>
@@ -427,7 +430,7 @@ export default function ReportRecapView() {
                             {med.category || 'Obat'}
                           </span>
                         </div>
-                        <div className="font-black text-[#030879]">
+                        <div className="font-black text-[#0f3d6b]">
                           {med.total_quantity_base} <span className="text-[10px] font-semibold text-slate-500">{med.base_unit}</span>
                         </div>
                       </div>
@@ -435,7 +438,7 @@ export default function ReportRecapView() {
                       {/* Progress FEFO Bar */}
                       <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-linear-to-r from-[#299dc9] to-[#060eff] rounded-full transition-all duration-300"
+                          className="h-full bg-linear-to-r from-[#155ea3] to-[#ec1415] rounded-full transition-all duration-300"
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
@@ -484,7 +487,7 @@ export default function ReportRecapView() {
                           <td className="py-2.5 font-bold text-slate-800">
                             {t.date}
                           </td>
-                          <td className="py-2.5 text-center font-bold text-[#030879]">
+                          <td className="py-2.5 text-center font-bold text-[#0f3d6b]">
                             {t.total}
                           </td>
                           <td className="py-2.5 text-center text-emerald-600 font-bold">
@@ -492,7 +495,7 @@ export default function ReportRecapView() {
                           </td>
                           <td className="py-2.5 text-center">
                             {t.cito > 0 ? (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-[#ec1415]">
                                 {t.cito} CITO
                               </span>
                             ) : (
@@ -532,7 +535,7 @@ export default function ReportRecapView() {
                 placeholder="Cari kode resep, pasien, dokter..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-[#d4e7f3] bg-[#f8fbfe] text-xs placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#0284c7]/30 transition"
+                className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 bg-[#f8fbfe] text-xs placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-[#155ea3]/30 transition"
               />
             </div>
           </div>
@@ -565,7 +568,7 @@ export default function ReportRecapView() {
 
                     return (
                       <tr key={p.id} className="hover:bg-slate-50/60 transition">
-                        <td className="py-3 px-3 font-bold text-[#0284c7]">
+                        <td className="py-3 px-3 font-bold text-[#155ea3]">
                           {p.prescription_code}
                         </td>
                         <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
@@ -633,7 +636,7 @@ export default function ReportRecapView() {
           <div>
             <p className="font-semibold">Mengetahui & Menyetujui</p>
             <div className="h-16" />
-            <p className="font-bold underline">Kepala Klinik Almedika</p>
+            <p className="font-bold underline">Kepala Klinik ELMedika</p>
             <p className="text-[10px] text-slate-500">NIP: 19800515 200501 1 002</p>
           </div>
         </div>

@@ -32,6 +32,7 @@ const {
 const {
   getPatients,
   getPatientById,
+  createPatient,
   getUsers
 } = require('../controllers/patientController');
 
@@ -53,7 +54,7 @@ router.post('/auth/login', login);
 router.get('/prescriptions',                    requireAuth, getPrescriptions);
 router.get('/prescriptions/:id',                requireAuth, getPrescriptionById);
 router.post('/prescriptions',                   requireAuth, requireRole(['dokter']), createPrescription);
-router.patch('/prescriptions/:id/status',       requireAuth, requireRole(['apoteker']), updatePrescriptionStatus);
+router.patch('/prescriptions/:id/status',       requireAuth, requireRole(['apoteker', 'dokter']), updatePrescriptionStatus);
 router.post('/prescriptions/:id/dispense',      requireAuth, requireRole(['apoteker']), dispensePrescription);
 router.get('/prescriptions/:id/etiket',         requireAuth, requireRole(['apoteker']), getEtiketData);
 
@@ -85,6 +86,7 @@ router.post('/adjustments',                     requireAuth, requireRole(['apote
 // Patients & Users
 // ─────────────────────────────────────────────
 router.get('/patients',                         requireAuth, requireRole(['dokter', 'apoteker', 'admin']), getPatients);
+router.post('/patients',                        requireAuth, requireRole(['dokter', 'admin']), createPatient);
 router.get('/patients/:id',                     requireAuth, requireRole(['dokter', 'apoteker', 'admin']), getPatientById);
 router.get('/users',                            requireAuth, requireRole(['admin']), getUsers);
 

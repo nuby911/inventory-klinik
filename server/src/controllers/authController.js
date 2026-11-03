@@ -1,35 +1,39 @@
 const db = require('../config/database');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../middlewares/authMiddleware');
 
-function login(req, res) {
+async function login(req, res) {
   try {
     const { email, password, role } = req.body;
 
-    if (!email && !role) {
-      return res.status(400).json({ success: false, message: 'Email atau peran wajib dipilih.' });
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email wajib diisi.' 
+      });
     }
 
-    let user = null;
-
-    if (email) {
-      user = db.prepare(`
-        SELECT id, name, email, password_hash, role 
-        FROM users 
-        WHERE LOWER(email) = LOWER(?) OR LOWER(name) LIKE LOWER(?)
-      `).get(email.trim(), `%${email.trim()}%`);
+    if (!password || typeof password !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password wajib diisi.' 
+      });
     }
 
-    if (!user && role) {
-      user = db.prepare(`
-        SELECT id, name, email, password_hash, role 
-        FROM users 
-        WHERE role = ?
-      `).get(role.toLowerCase());
-    }
+    const trimmedEmail = email.trim();
+
+    // Find user strictly by email
+    const user = db.prepare(`
+      SELECT id, name, email, password_hash, role 
+      FROM users 
+      WHERE LOWER(email) = LOWER(?)
+    `).get(trimmedEmail);
 
     if (!user) {
       return res.status(401).json({ 
         success: false, 
-        message: 'Kredensial pengguna tidak ditemukan. Pastikan email atau role terdaftar.' 
+        message: 'Kredensial pengguna tidak ditemukan. Pastikan email terdaftar.' 
       });
     }
 
@@ -41,9 +45,17 @@ function login(req, res) {
       });
     }
 
-    // Password validation with friendly demo fallback
-    const validPasswords = ['password123', '123456', 'almedika123', `hash_${user.role}`, user.password_hash];
-    if (password && !validPasswords.includes(password)) {
+    // Password verification: support bcrypt hash and seed demo passwords
+    let passwordValid = false;
+    if (user.password_hash.startsWith('$2a$') || user.password_hash.startsWith('$2b$')) {
+      passwordValid = await bcrypt.compare(password, user.password_hash);
+    } else {
+      // Legacy seed password comparison (hash_admin, password123, almedika123, etc.)
+      const allowedDemo = ['almedika123', 'password123', '123456', `hash_${user.role}`, user.password_hash];
+      passwordValid = allowedDemo.includes(password);
+    }
+
+    if (!passwordValid) {
       return res.status(401).json({ 
         success: false, 
         message: 'Password salah. Silakan coba kembali.' 
@@ -65,6 +77,18 @@ function login(req, res) {
       badgeColor = 'bg-blue-100 text-blue-800 border-blue-300';
     }
 
+    // Generate cryptographically signed JWT token
+    const token = jwt.sign(
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      },
+      JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
     const userData = {
       id: user.id,
       name: user.name,
@@ -72,7 +96,7 @@ function login(req, res) {
       role: user.role,
       title,
       badgeColor,
-      token: `jwt_almedika_${user.id}_${Date.now()}`
+      token
     };
 
     res.json({
@@ -82,7 +106,7 @@ function login(req, res) {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Terjadi kesalahan internal server saat login.' });
   }
 }
 

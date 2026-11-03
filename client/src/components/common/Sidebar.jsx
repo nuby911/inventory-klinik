@@ -15,32 +15,13 @@ import {
   BarChart3,
   LogOut 
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/useAuth';
+import { useSocket } from '../../context/useSocket';
 import { api } from '../../services/api';
-
-function CaduceusIcon({ className = "w-7 h-7" }) {
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      fill="currentColor"
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle cx="50" cy="14" r="6" />
-      <path d="M48 18 H52 V88 H48 Z" rx="2" />
-      <circle cx="50" cy="90" r="3" />
-      <path d="M48 24 C32 12, 16 16, 10 27 C 22 28, 34 32, 48 38 Z" opacity="0.95" />
-      <path d="M52 24 C68 12, 84 16, 90 27 C 78 28, 66 32, 52 38 Z" opacity="0.95" />
-      <path d="M48 38 C 30 42, 28 52, 42 60 C 50 64, 52 70, 48 76 C 44 82, 38 84, 46 88 C 47 88, 48 87, 49 86 C 45 84, 47 80, 50 75 C 56 68, 52 60, 44 56 C 36 52, 36 46, 48 42 Z" />
-      <path d="M52 38 C 70 42, 72 52, 58 60 C 50 64, 48 70, 52 76 C 56 82, 62 84, 54 88 C 53 88, 52 87, 51 86 C 55 84, 53 80, 50 75 C 44 68, 48 60, 56 56 C 64 52, 64 46, 52 42 Z" />
-    </svg>
-  );
-}
 
 export default function Sidebar({ activeSubTab, setActiveSubTab, mobileOpen, setMobileOpen }) {
   const { currentUser, logout } = useAuth();
-  const { isConnected } = useSocket();
+  const { isConnected, socket } = useSocket();
   const [queueStats, setQueueStats] = useState({ cito: 0, waiting: 0 });
 
   useEffect(() => {
@@ -55,10 +36,25 @@ export default function Sidebar({ activeSubTab, setActiveSubTab, mobileOpen, set
         // silent
       }
     };
+
     fetchStats();
-    const interval = setInterval(fetchStats, 5000);
-    return () => clearInterval(interval);
-  }, []);
+
+    if (socket) {
+      socket.on('prescription:new', fetchStats);
+      socket.on('prescription:status_changed', fetchStats);
+      socket.on('prescription:dispensed', fetchStats);
+    }
+
+    const interval = setInterval(fetchStats, 30000);
+    return () => {
+      clearInterval(interval);
+      if (socket) {
+        socket.off('prescription:new', fetchStats);
+        socket.off('prescription:status_changed', fetchStats);
+        socket.off('prescription:dispensed', fetchStats);
+      }
+    };
+  }, [socket]);
 
   const getNavSections = () => {
     const navSections = [
@@ -179,15 +175,17 @@ export default function Sidebar({ activeSubTab, setActiveSubTab, mobileOpen, set
         {/* Brand Clinic Header */}
         <div className="px-5 py-4 flex items-center justify-between border-b border-[#e2eef6] bg-[#f8fbfe] relative">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#030879] text-white flex items-center justify-center shrink-0 shadow-xs">
-              <CaduceusIcon className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 shadow-xs border border-slate-200 overflow-hidden p-0.5">
+              <img src="/logo-badge.png" alt="Logo Klinik ELMedika" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
-              <div className="font-extrabold text-sm text-[#030879] tracking-tight leading-tight">
-                Klinik Almedika
+              <div className="font-extrabold text-sm text-[#0f3d6b] tracking-tight leading-tight flex items-center gap-1">
+                <span>Klinik</span>
+                <span className="text-[#0f3d6b]">EL</span>
+                <span className="text-[#ec1415]">Medika</span>
               </div>
-              <div className="text-[10px] font-bold text-[#1b8ebc] tracking-wider uppercase">
-                SIM Farmasi & Rawat Jalan
+              <div className="text-[10px] font-bold text-[#155ea3] tracking-wider uppercase">
+                Praktek Dokter & Sunat
               </div>
             </div>
           </div>
@@ -205,7 +203,7 @@ export default function Sidebar({ activeSubTab, setActiveSubTab, mobileOpen, set
         <div className="flex-1 px-3.5 py-3 space-y-5 overflow-y-auto">
           {navSections.map((section, idx) => (
             <div key={idx} className="space-y-1">
-              <div className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-[#0284c7]/75">
+              <div className="px-3 text-[10px] font-extrabold uppercase tracking-wider text-[#155ea3]/80">
                 {section.category}
               </div>
 
@@ -223,22 +221,22 @@ export default function Sidebar({ activeSubTab, setActiveSubTab, mobileOpen, set
                       }}
                       className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs transition-all duration-150 cursor-pointer text-left ${
                         isActive
-                          ? 'bg-[#060eff] text-white font-semibold shadow-md shadow-blue-700/25 ring-1 ring-white/30'
-                          : 'text-slate-600 hover:bg-[#eaf4fb] hover:text-[#030879] font-medium'
+                          ? 'bg-[#155ea3] text-white font-semibold shadow-md shadow-blue-900/20 ring-1 ring-white/20'
+                          : 'text-slate-600 hover:bg-[#eef5fc] hover:text-[#155ea3] font-medium'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#1b8ebc]'}`} />
+                        <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#155ea3]'}`} />
                         <span>{item.label}</span>
                       </div>
 
                       {item.badge && (
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                           item.isCito 
-                            ? 'bg-rose-500 text-white animate-pulse' 
+                            ? 'bg-[#ec1415] text-white animate-pulse shadow-xs' 
                             : isActive 
                               ? 'bg-white/25 text-white' 
-                              : 'bg-[#e0f2fe] text-[#0284c7]'
+                              : 'bg-[#e8f2fc] text-[#155ea3]'
                         }`}>
                           {item.badge}
                         </span>

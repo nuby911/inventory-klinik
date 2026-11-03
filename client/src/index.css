@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand-navy: #155ea3;
+  --color-brand-navy-dark: #0f3d6b;
+  --color-brand-navy-light: #e8f2fc;
+  --color-brand-red: #ec1415;
+  --color-brand-red-dark: #c91011;
+  --color-brand-red-light: #fef2f2;
+}
+
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

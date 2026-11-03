@@ -1,15 +1,27 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { ShieldAlert, XCircle } from 'lucide-react';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
 import { SocketProvider } from './context/SocketContext';
 import Sidebar from './components/common/Sidebar';
 import TopBar from './components/common/TopBar';
 import DashboardAnalytics from './components/common/DashboardAnalytics';
-import DoctorPortal from './pages/doctor/DoctorPortal';
-import PharmacyPortal from './pages/pharmacy/PharmacyPortal';
-import AdminPortal from './pages/admin/AdminPortal';
 import LoginPage from './pages/auth/LoginPage';
-import ReportRecapView from './components/common/ReportRecapView';
+
+// Code Splitting: Lazy-load role portals and recap view
+const DoctorPortal = lazy(() => import('./pages/doctor/DoctorPortal'));
+const PharmacyPortal = lazy(() => import('./pages/pharmacy/PharmacyPortal'));
+const AdminPortal = lazy(() => import('./pages/admin/AdminPortal'));
+const ReportRecapView = lazy(() => import('./components/common/ReportRecapView'));
+
+function PortalFallback() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[350px] p-8 text-center">
+      <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-3 shadow-md" />
+      <p className="text-xs font-semibold text-slate-500">Memuat modul kerja klinik...</p>
+    </div>
+  );
+}
 
 // Role routes definitions to prevent URL link modification bypass
 const ROUTE_RULES = {
@@ -38,6 +50,11 @@ function MainApp() {
   const [activeSubTab, setActiveSubTab] = useState('dashboard');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [securityAlert, setSecurityAlert] = useState(null);
+
+  const activeSubTabRef = useRef(activeSubTab);
+  useEffect(() => {
+    activeSubTabRef.current = activeSubTab;
+  }, [activeSubTab]);
 
   // Validate URL against user role and guard against link modification bypass
   const validateRouteAndSync = useCallback((role, currentTab) => {
@@ -92,7 +109,6 @@ function MainApp() {
         setActiveSubTab(secondarySegment);
         return;
       }
-      // If /admin or /admin/something_invalid or /admin/dashboard -> automatically go to dashboard
       setActiveSubTab('dashboard');
       window.history.replaceState(null, '', `/${role}/dashboard`);
       return;
@@ -105,8 +121,7 @@ function MainApp() {
       return;
     }
 
-    // 4. Default safe fallback for all other routes ('/', unknown path):
-    // ALWAYS automatically go to dashboard!
+    // 4. Default safe fallback for all other routes ('/', unknown path)
     setActiveSubTab('dashboard');
     window.history.replaceState(null, '', `/${role}/dashboard`);
   }, [logout]);
@@ -120,11 +135,11 @@ function MainApp() {
       return;
     }
 
-    validateRouteAndSync(currentUser.role, activeSubTab);
+    validateRouteAndSync(currentUser.role, activeSubTabRef.current);
 
     // Listen to browser Back/Forward navigation to prevent link bypass
     const handlePopState = () => {
-      validateRouteAndSync(currentUser.role, activeSubTab);
+      validateRouteAndSync(currentUser.role, activeSubTabRef.current);
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -160,6 +175,7 @@ function MainApp() {
         {/* Top Context Header & Royal Blue Banner */}
         <TopBar 
           activeSubTab={activeSubTab} 
+          setActiveSubTab={handleTabChange}
           onToggleMobile={() => setMobileOpen(!mobileOpen)}
         />
 
@@ -190,25 +206,27 @@ function MainApp() {
 
         {/* Dedicated Workspace View based on Logged-in Role */}
         <main className="flex-1 p-3 sm:p-5 lg:p-8 -mt-2">
-          {activeSubTab === 'reports' ? (
-            <ReportRecapView />
-          ) : activeSubTab === 'dashboard' || !ROUTE_RULES[currentUser?.role]?.subtabs.includes(activeSubTab) ? (
-            <DashboardAnalytics setActiveSubTab={handleTabChange} />
-          ) : (
-            <>
-              {currentUser.role === 'dokter' && (
-                <DoctorPortal activeSubTab={activeSubTab} />
-              )}
+          <Suspense fallback={<PortalFallback />}>
+            {activeSubTab === 'reports' ? (
+              <ReportRecapView />
+            ) : activeSubTab === 'dashboard' || !ROUTE_RULES[currentUser?.role]?.subtabs.includes(activeSubTab) ? (
+              <DashboardAnalytics setActiveSubTab={handleTabChange} />
+            ) : (
+              <>
+                {currentUser.role === 'dokter' && (
+                  <DoctorPortal activeSubTab={activeSubTab} />
+                )}
 
-              {currentUser.role === 'apoteker' && (
-                <PharmacyPortal activeSubTab={activeSubTab} />
-              )}
+                {currentUser.role === 'apoteker' && (
+                  <PharmacyPortal activeSubTab={activeSubTab} />
+                )}
 
-              {currentUser.role === 'admin' && (
-                <AdminPortal activeSubTab={activeSubTab} />
-              )}
-            </>
-          )}
+                {currentUser.role === 'admin' && (
+                  <AdminPortal activeSubTab={activeSubTab} />
+                )}
+              </>
+            )}
+          </Suspense>
         </main>
       </div>
     </div>

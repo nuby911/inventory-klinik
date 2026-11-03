@@ -4,24 +4,27 @@ import bwipjs from 'bwip-js';
 
 function BarcodeCanvas({ bcid, text, options = {}, className = '' }) {
   const canvasRef = useRef(null);
+  const { scale = 3, height = 12, includetext = true, ...restOptions } = options;
+  const optionsKey = JSON.stringify(restOptions);
 
   useEffect(() => {
     if (!canvasRef.current || !text) return;
     try {
+      const extra = optionsKey ? JSON.parse(optionsKey) : {};
       bwipjs.toCanvas(canvasRef.current, {
         bcid: bcid,
         text: text,
-        scale: options.scale || 3,
-        height: options.height || 12,
-        includetext: options.includetext !== undefined ? options.includetext : true,
+        scale,
+        height,
+        includetext,
         textxalign: 'center',
         backgroundcolor: 'ffffff',
-        ...options
+        ...extra
       });
     } catch (e) {
       console.error('Barcode render error:', e, text);
     }
-  }, [bcid, text, options]);
+  }, [bcid, text, scale, height, includetext, optionsKey]);
 
   return <canvas ref={canvasRef} className={className} />;
 }

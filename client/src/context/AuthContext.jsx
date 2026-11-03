@@ -1,34 +1,7 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { useState } from 'react';
 import { api } from '../services/api';
-
-const AuthContext = createContext(null);
-
-export const ROLES = {
-  DOKTER: {
-    id: 1,
-    role: 'dokter',
-    email: 'dokter@almedika.com',
-    name: 'Dokter',
-    title: 'Pemeriksa Rawat Jalan',
-    badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300'
-  },
-  APOTEKER: {
-    id: 2,
-    role: 'apoteker',
-    email: 'apoteker@almedika.com',
-    name: 'Apoteker',
-    title: 'Instalasi Farmasi',
-    badgeColor: 'bg-teal-100 text-teal-800 border-teal-300'
-  },
-  ADMIN: {
-    id: 3,
-    role: 'admin',
-    email: 'admin@almedika.com',
-    name: 'Logistik',
-    title: 'Gudang & Logistik',
-    badgeColor: 'bg-blue-100 text-blue-800 border-blue-300'
-  },
-};
+import { AuthContext } from './authContextDef';
+import { ROLES } from './roles';
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -91,8 +64,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }
