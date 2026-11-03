@@ -28,8 +28,8 @@ const ROUTE_RULES = {
   admin: {
     name: 'Admin Logistik',
     defaultTab: 'dashboard',
-    allowedKeywords: ['admin', 'logistik', 'inventory_master', 'restock_batches', 'returns_audit', 'logistics_overview', 'dashboard', 'reports', 'laporan'],
-    subtabs: ['dashboard', 'reports', 'inventory_master', 'restock_batches', 'returns_audit', 'logistics_overview']
+    allowedKeywords: ['admin', 'logistik', 'inventory_master', 'restock_batches', 'logistics_overview', 'dashboard', 'reports', 'laporan'],
+    subtabs: ['dashboard', 'reports', 'inventory_master', 'restock_batches', 'logistics_overview']
   },
   dokter: {
     name: 'Dokter Spesialis',
@@ -40,8 +40,8 @@ const ROUTE_RULES = {
   apoteker: {
     name: 'Apoteker FEFO',
     defaultTab: 'dashboard',
-    allowedKeywords: ['apoteker', 'pharmacy', 'farmasi', 'queue_dispensing', 'expiry_monitoring', 'damage_report', 'dispensed_history', 'dashboard', 'reports', 'laporan'],
-    subtabs: ['dashboard', 'reports', 'queue_dispensing', 'expiry_monitoring', 'damage_report', 'dispensed_history']
+    allowedKeywords: ['apoteker', 'pharmacy', 'farmasi', 'queue_dispensing', 'stock_monitoring', 'expiry_monitoring', 'dispensed_history', 'dashboard', 'reports', 'laporan'],
+    subtabs: ['dashboard', 'reports', 'queue_dispensing', 'stock_monitoring', 'dispensed_history']
   }
 };
 

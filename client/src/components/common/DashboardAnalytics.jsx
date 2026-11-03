@@ -31,7 +31,6 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
   const [prescriptions, setPrescriptions] = useState([]);
   const [medicines, setMedicines] = useState([]);
   const [expiringBatches, setExpiringBatches] = useState([]);
-  const [adjustments, setAdjustments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [statusFilter, setStatusFilter] = useState('all');
@@ -40,17 +39,15 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      const [rxRes, medRes, expRes, adjRes] = await Promise.all([
+      const [rxRes, medRes, expRes] = await Promise.all([
         api.getPrescriptions().catch(() => ({ data: [] })),
         api.getMedicines().catch(() => ({ data: [] })),
         api.getExpiringBatches(60).catch(() => ({ data: [] })),
-        api.getAdjustments().catch(() => ({ data: [] })),
       ]);
 
       setPrescriptions(Array.isArray(rxRes.data) ? rxRes.data : []);
       setMedicines(Array.isArray(medRes.data) ? medRes.data : []);
       setExpiringBatches(Array.isArray(expRes.data) ? expRes.data : []);
-      setAdjustments(Array.isArray(adjRes.data) ? adjRes.data : []);
     } catch (err) {
       console.error('Gagal mengambil data dashboard:', err);
     } finally {
@@ -482,21 +479,6 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
               )}
             </div>
           </div>
-
-          {/* Card: Riwayat Penyesuaian Terakhir */}
-          {adjustments.length > 0 && (
-            <div className="bg-white rounded-lg border border-slate-200 p-3">
-              <div className="text-xs font-semibold text-slate-700 mb-2">Aktivitas Logistik Terakhir</div>
-              <div className="space-y-2 text-xs">
-                {adjustments.slice(0, 2).map((adj, i) => (
-                  <div key={i} className="text-slate-600 text-[11px] border-l-2 border-slate-300 pl-2">
-                    <span className="font-medium text-slate-800">{adj.medicine_name}</span>: {adj.quantity_input} {adj.base_unit} ({adj.reason})
-                    <div className="text-[10px] text-slate-400">{timeAgo(adj.created_at)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
         </div>
       </div>

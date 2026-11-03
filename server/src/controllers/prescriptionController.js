@@ -1,6 +1,15 @@
 const db = require('../config/database');
 const { convertToBaseUnit, previewFEFOAllocation, dispensePrescriptionFEFO } = require('../services/fefoService');
 
+function emitToClinicalStaff(io, event, data) {
+  if (!io) return;
+  if (typeof io.to === 'function') {
+    io.to('role:apoteker').to('role:dokter').emit(event, data);
+  } else if (typeof io.emit === 'function') {
+    io.emit(event, data);
+  }
+}
+
 /**
  * Check allergy vs contraindication bidirectionally with tokenization
  */
@@ -117,58 +126,34 @@ function createPrescription(req, res) {
   try {
     const { patient_id, patient_name, patient_gender, patient_date_of_birth, patient_allergies, is_cito, notes, items } = req.body;
     // Strict identity binding to authenticated session
-    const doctor_id = req.user?.id || req.body.doctor_id || 1;
+    const doctor_id = req.user?.id || 1;
 
-    let resolvedPatientId = patient_id;
-
-    // Support direct patient name input without pre-existing patient_id
-    if (!resolvedPatientId && patient_name && typeof patient_name === 'string' && patient_name.trim()) {
-      const year = new Date().getFullYear();
-      const maxRow = db.prepare('SELECT MAX(id) as maxId FROM patients').get();
-      const nextNum = (maxRow?.maxId || 0) + 1;
-      let rm = `RM-${year}-${String(nextNum).padStart(4, '0')}`;
-      const existingRM = db.prepare('SELECT id FROM patients WHERE medical_record_number = ?').get(rm);
-      if (existingRM) {
-        rm = `${rm}-${Math.floor(100 + Math.random() * 900)}`;
-      }
-      const insertP = db.prepare(`
-        INSERT INTO patients (medical_record_number, name, gender, date_of_birth, allergies)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(
-        rm,
-        patient_name.trim(),
-        (patient_gender === 'P' || patient_gender === 'Perempuan') ? 'P' : 'L',
-        patient_date_of_birth || null,
-        patient_allergies || 'Tidak Ada'
-      );
-      resolvedPatientId = insertP.lastInsertRowid;
-    }
-
-    if (!resolvedPatientId || !items || !Array.isArray(items) || items.length === 0) {
+    if ((!patient_id && !patient_name) || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: 'Data pasien (ID atau Nama) dan item resep wajib diisi' });
     }
 
-    // Validate item inputs
+    // Validate item inputs including strict number check (anti-NaN bypass)
     for (const item of items) {
-      if (!item.medicine_id || !item.unit_selected || Number(item.quantity_input) <= 0) {
-        return res.status(400).json({ success: false, message: 'Setiap item obat wajib memiliki satuan dan jumlah kuantitas positif.' });
+      const qty = Number(item.quantity_input);
+      if (!item.medicine_id || !item.unit_selected || !Number.isFinite(qty) || qty <= 0) {
+        return res.status(400).json({ success: false, message: 'Setiap item obat wajib memiliki satuan dan jumlah kuantitas angka valid lebih dari 0.' });
       }
-    }
-
-    const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(resolvedPatientId);
-    if (!patient) {
-      return res.status(404).json({ success: false, message: 'Pasien tidak ditemukan' });
     }
 
     // Safety Contraindication Check
     const warnings = [];
+    const allergiesToCheck = patient_id 
+      ? db.prepare('SELECT allergies FROM patients WHERE id = ?').get(patient_id)?.allergies 
+      : patient_allergies;
 
-    for (const item of items) {
-      const med = db.prepare('SELECT name, contraindications FROM medicines WHERE id = ?').get(item.medicine_id);
-      if (med && med.contraindications) {
-        const hasConflict = checkAllergyConflict(patient.allergies, med.contraindications);
-        if (hasConflict) {
-          warnings.push(`KONTRAINDIKASI: ${med.name} berisiko memicu alergi pasien (${patient.allergies})!`);
+    if (allergiesToCheck) {
+      for (const item of items) {
+        const med = db.prepare('SELECT name, contraindications FROM medicines WHERE id = ?').get(item.medicine_id);
+        if (med && med.contraindications) {
+          const hasConflict = checkAllergyConflict(allergiesToCheck, med.contraindications);
+          if (hasConflict) {
+            warnings.push(`KONTRAINDIKASI: ${med.name} berisiko memicu alergi pasien (${allergiesToCheck})!`);
+          }
         }
       }
     }
@@ -183,7 +168,36 @@ function createPrescription(req, res) {
       prescription_code = `ER-${year}-${String(nextNum).padStart(4, '0')}-${Math.floor(100 + Math.random() * 900)}`;
     }
 
+    // Atomic transaction creating patient (if new) and prescription
     const createTransaction = db.transaction(() => {
+      let resolvedPatientId = patient_id;
+
+      if (!resolvedPatientId && patient_name && typeof patient_name === 'string' && patient_name.trim()) {
+        const pMaxRow = db.prepare('SELECT MAX(id) as maxId FROM patients').get();
+        const pNextNum = (pMaxRow?.maxId || 0) + 1;
+        let rm = `RM-${year}-${String(pNextNum).padStart(4, '0')}`;
+        const existingRM = db.prepare('SELECT id FROM patients WHERE medical_record_number = ?').get(rm);
+        if (existingRM) {
+          rm = `${rm}-${Math.floor(100 + Math.random() * 900)}`;
+        }
+        const insertP = db.prepare(`
+          INSERT INTO patients (medical_record_number, name, gender, date_of_birth, allergies)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(
+          rm,
+          patient_name.trim(),
+          (patient_gender === 'P' || patient_gender === 'Perempuan') ? 'P' : 'L',
+          patient_date_of_birth || null,
+          patient_allergies || 'Tidak Ada'
+        );
+        resolvedPatientId = insertP.lastInsertRowid;
+      }
+
+      const patient = db.prepare('SELECT id FROM patients WHERE id = ?').get(resolvedPatientId);
+      if (!patient) {
+        throw new Error('Pasien tidak ditemukan');
+      }
+
       const insertRx = db.prepare(`
         INSERT INTO prescriptions (prescription_code, patient_id, doctor_id, status, is_cito, notes)
         VALUES (?, ?, ?, 'pending', ?, ?)
@@ -228,11 +242,9 @@ function createPrescription(req, res) {
       WHERE p.id = ?
     `).get(newRxId);
 
-    // Emit live event through Socket.io
+    // Emit live event through Socket.io strictly to clinical role rooms
     const io = req.app.get('io');
-    if (io) {
-      io.emit('prescription:new', createdRx);
-    }
+    emitToClinicalStaff(io, 'prescription:new', createdRx);
 
     res.status(201).json({
       success: true,
@@ -297,9 +309,7 @@ function updatePrescriptionStatus(req, res) {
     }
 
     const io = req.app.get('io');
-    if (io) {
-      io.emit('prescription:status_changed', { id: Number(id), status });
-    }
+    emitToClinicalStaff(io, 'prescription:status_changed', { id: Number(id), status });
 
     res.json({ success: true, message: `Status resep diubah menjadi ${status}` });
   } catch (error) {
@@ -312,13 +322,13 @@ function dispensePrescription(req, res) {
   try {
     const { id } = req.params;
     // Bind to authenticated pharmacist ID
-    const pharmacist_id = req.user?.id || req.body.pharmacist_id || 2;
+    const pharmacist_id = req.user?.id || 2;
 
     const result = dispensePrescriptionFEFO(Number(id), pharmacist_id);
 
     const io = req.app.get('io');
-    if (io) {
-      io.emit('prescription:dispensed', result);
+    emitToClinicalStaff(io, 'prescription:dispensed', result);
+    if (io && typeof io.emit === 'function') {
       io.emit('stock:updated');
     }
 

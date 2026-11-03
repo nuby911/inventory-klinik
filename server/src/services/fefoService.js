@@ -77,7 +77,7 @@ function previewFEFOAllocation(medicineId, requiredBaseQty, simulatedBatchStock 
   const batches = db.prepare(`
     SELECT id, batch_number, expired_date, stock_qty, rack_location, distributor
     FROM medicine_batches
-    WHERE medicine_id = ? AND stock_qty > 0
+    WHERE medicine_id = ? AND stock_qty > 0 AND date(expired_date) >= date('now')
     ORDER BY expired_date ASC, id ASC
   `).all(medicineId);
 
@@ -124,82 +124,81 @@ function previewFEFOAllocation(medicineId, requiredBaseQty, simulatedBatchStock 
  * Execute FEFO deduction for a prescription with full BPOM Batch Traceability & ACID atomicity
  */
 function dispensePrescriptionFEFO(prescriptionId, pharmacistUserId = null) {
-  const prescription = db.prepare(`
-    SELECT p.*, pt.name as patient_name, pt.medical_record_number
-    FROM prescriptions p
-    JOIN patients pt ON p.patient_id = pt.id
-    WHERE p.id = ?
-  `).get(prescriptionId);
-
-  if (!prescription) {
-    throw new Error('Resep tidak ditemukan');
-  }
-
-  if (prescription.status === 'completed') {
-    throw new Error('Resep ini sudah selesai diproses sebelumnya.');
-  }
-
-  if (prescription.status === 'cancelled') {
-    throw new Error('Resep ini telah dibatalkan dan tidak dapat diserahkan.');
-  }
-
-  if (prescription.status !== 'pending' && prescription.status !== 'preparing') {
-    throw new Error(`Resep dengan status '${prescription.status}' tidak dapat diserahkan.`);
-  }
-
-  const items = db.prepare(`
-    SELECT pi.*, m.name as medicine_name, m.base_unit, m.total_stock
-    FROM prescription_items pi
-    JOIN medicines m ON pi.medicine_id = m.id
-    WHERE pi.prescription_id = ?
-  `).all(prescriptionId);
-
-  if (items.length === 0) {
-    throw new Error('Resep tidak memiliki item obat untuk diserahkan.');
-  }
-
-  // First pass: Calculate cumulative requirements across duplicate medicines
-  const totalNeededByMed = new Map();
-  for (const item of items) {
-    const current = totalNeededByMed.get(item.medicine_id) || { name: item.medicine_name, base_unit: item.base_unit, qty: 0 };
-    current.qty += item.quantity_base_unit;
-    totalNeededByMed.set(item.medicine_id, current);
-  }
-
-  for (const [medId, need] of totalNeededByMed.entries()) {
-    const preview = previewFEFOAllocation(medId, need.qty);
-    if (!preview.isFulfilled) {
-      throw new Error(`Stok obat ${need.name} tidak mencukupi untuk memenuhi resep (Kurang ${preview.deficit} ${need.base_unit}).`);
-    }
-  }
-
-  // Precompiled Statements for High Performance & Race Condition Safety
-  const updateBatchStmt = db.prepare(`
-    UPDATE medicine_batches 
-    SET stock_qty = stock_qty - ? 
-    WHERE id = ? AND stock_qty >= ?
-  `);
-
-  const updateMedStmt = db.prepare(`
-    UPDATE medicines 
-    SET total_stock = total_stock - ? 
-    WHERE id = ? AND total_stock >= ?
-  `);
-
-  const insertItemBatchStmt = db.prepare(`
-    INSERT INTO prescription_item_batches 
-    (prescription_item_id, batch_id, batch_number, expired_date, dispensed_qty, pharmacist_id)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-
-  const updateRxStatusStmt = db.prepare(`
-    UPDATE prescriptions 
-    SET status = 'completed'
-    WHERE id = ? AND status != 'completed' AND status != 'cancelled'
-  `);
-
-  // Second pass: Perform deductions in a single transaction
   const executeTransaction = db.transaction(() => {
+    const prescription = db.prepare(`
+      SELECT p.*, pt.name as patient_name, pt.medical_record_number
+      FROM prescriptions p
+      JOIN patients pt ON p.patient_id = pt.id
+      WHERE p.id = ?
+    `).get(prescriptionId);
+
+    if (!prescription) {
+      throw new Error('Resep tidak ditemukan');
+    }
+
+    if (prescription.status === 'completed') {
+      throw new Error('Resep ini sudah selesai diproses sebelumnya.');
+    }
+
+    if (prescription.status === 'cancelled') {
+      throw new Error('Resep ini telah dibatalkan dan tidak dapat diserahkan.');
+    }
+
+    if (prescription.status !== 'pending' && prescription.status !== 'preparing') {
+      throw new Error(`Resep dengan status '${prescription.status}' tidak dapat diserahkan.`);
+    }
+
+    const items = db.prepare(`
+      SELECT pi.*, m.name as medicine_name, m.base_unit, m.total_stock
+      FROM prescription_items pi
+      JOIN medicines m ON pi.medicine_id = m.id
+      WHERE pi.prescription_id = ?
+    `).all(prescriptionId);
+
+    if (items.length === 0) {
+      throw new Error('Resep tidak memiliki item obat untuk diserahkan.');
+    }
+
+    // First pass: Calculate cumulative requirements across duplicate medicines
+    const totalNeededByMed = new Map();
+    for (const item of items) {
+      const current = totalNeededByMed.get(item.medicine_id) || { name: item.medicine_name, base_unit: item.base_unit, qty: 0 };
+      current.qty += item.quantity_base_unit;
+      totalNeededByMed.set(item.medicine_id, current);
+    }
+
+    for (const [medId, need] of totalNeededByMed.entries()) {
+      const preview = previewFEFOAllocation(medId, need.qty);
+      if (!preview.isFulfilled) {
+        throw new Error(`Stok obat ${need.name} tidak mencukupi untuk memenuhi resep (Kurang ${preview.deficit} ${need.base_unit}).`);
+      }
+    }
+
+    // Precompiled Statements for High Performance & Race Condition Safety
+    const updateBatchStmt = db.prepare(`
+      UPDATE medicine_batches 
+      SET stock_qty = stock_qty - ? 
+      WHERE id = ? AND stock_qty >= ?
+    `);
+
+    const updateMedStmt = db.prepare(`
+      UPDATE medicines 
+      SET total_stock = total_stock - ? 
+      WHERE id = ? AND total_stock >= ?
+    `);
+
+    const insertItemBatchStmt = db.prepare(`
+      INSERT INTO prescription_item_batches 
+      (prescription_item_id, batch_id, batch_number, expired_date, dispensed_qty, pharmacist_id)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const updateRxStatusStmt = db.prepare(`
+      UPDATE prescriptions 
+      SET status = 'completed'
+      WHERE id = ? AND status != 'completed' AND status != 'cancelled'
+    `);
+
     const dispensedDetails = [];
     const simulatedBatchStock = new Map();
 
@@ -252,17 +251,16 @@ function dispensePrescriptionFEFO(prescriptionId, pharmacistUserId = null) {
       throw new Error('Resep ini sudah selesai diproses oleh apoteker lain atau telah dibatalkan.');
     }
 
-    return dispensedDetails;
+    return {
+      prescriptionId,
+      prescriptionCode: prescription.prescription_code,
+      patientName: prescription.patient_name,
+      medicalRecordNumber: prescription.medical_record_number,
+      dispensedItems: dispensedDetails
+    };
   });
 
-  const result = executeTransaction();
-  return {
-    prescriptionId,
-    prescriptionCode: prescription.prescription_code,
-    patientName: prescription.patient_name,
-    medicalRecordNumber: prescription.medical_record_number,
-    dispensedItems: result
-  };
+  return executeTransaction();
 }
 
 module.exports = {

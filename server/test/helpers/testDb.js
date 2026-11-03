@@ -62,17 +62,17 @@ function seedTestFixtures() {
   insertUnit.run(2, 'Strip', 10, 0);
   insertUnit.run(2, 'Butir', 1, 1);
 
-  // Medicine Batches for FEFO Testing
+  // Medicine Batches for FEFO Testing (Future Expiry Dates)
   const insertBatch = db.prepare('INSERT INTO medicine_batches (id, medicine_id, batch_number, expired_date, stock_qty, rack_location, distributor) VALUES (?, ?, ?, ?, ?, ?, ?)');
-  // Oldest expiry: 2026-10-15 (Batch A, 30 butir)
-  insertBatch.run(1, 1, 'BATCH-PCT-001', '2026-10-15', 30, 'Rak A-01', 'Kimia Farma');
-  // Middle expiry: 2026-12-20 (Batch B, 50 butir)
-  insertBatch.run(2, 1, 'BATCH-PCT-002', '2026-12-20', 50, 'Rak A-01', 'Kimia Farma');
-  // Furthest expiry: 2027-06-30 (Batch C, 70 butir)
-  insertBatch.run(3, 1, 'BATCH-PCT-003', '2027-06-30', 70, 'Rak A-02', 'Enseval');
+  // Oldest expiry: 2027-01-15 (Batch A, 30 butir)
+  insertBatch.run(1, 1, 'BATCH-PCT-001', '2027-01-15', 30, 'Rak A-01', 'Kimia Farma');
+  // Middle expiry: 2027-03-20 (Batch B, 50 butir)
+  insertBatch.run(2, 1, 'BATCH-PCT-002', '2027-03-20', 50, 'Rak A-01', 'Kimia Farma');
+  // Furthest expiry: 2027-08-30 (Batch C, 70 butir)
+  insertBatch.run(3, 1, 'BATCH-PCT-003', '2027-08-30', 70, 'Rak A-02', 'Enseval');
 
   // Med 2 (Amoxicillin: 1 batch of 100 butir)
-  insertBatch.run(4, 2, 'BATCH-AMX-001', '2026-11-01', 100, 'Rak B-01', 'Kimia Farma');
+  insertBatch.run(4, 2, 'BATCH-AMX-001', '2027-05-01', 100, 'Rak B-01', 'Kimia Farma');
 }
 
 module.exports = {

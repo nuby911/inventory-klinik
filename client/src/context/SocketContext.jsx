@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { SocketContext } from './socketContextDef';
+import { useAuth } from './useAuth';
 
 export function SocketProvider({ children }) {
+  const { currentUser } = useAuth();
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [incomingAlert, setIncomingAlert] = useState(null);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem('almedika_user') || localStorage.getItem('almedika_user');
-    let token = null;
-    try {
-      token = saved ? JSON.parse(saved)?.token : null;
-    } catch {}
+    const token = currentUser?.token;
+    if (!token) {
+      setSocket(null);
+      setIsConnected(false);
+      return;
+    }
 
     // Connect directly to backend port 5000
     const socketUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
@@ -67,7 +70,7 @@ export function SocketProvider({ children }) {
       setSocket(null);
       setIsConnected(false);
     };
-  }, []);
+  }, [currentUser?.token]);
 
   return (
     <SocketContext.Provider value={{ socket, isConnected, incomingAlert, setIncomingAlert }}>

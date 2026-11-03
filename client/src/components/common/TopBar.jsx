@@ -24,18 +24,16 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
       { id: 'reports', label: 'Laporan Rekapitulasi', desc: 'Rekap harian, mingguan, bulanan' }
     ],
     apoteker: [
-      { id: 'dashboard', label: 'Dashboard Operasional', desc: 'Ringkasan antrean dan peringatan ED' },
+      { id: 'dashboard', label: 'Dashboard Operasional', desc: 'Ringkasan antrean dan stok obat' },
       { id: 'queue_dispensing', label: 'Antrean Farmasi FEFO', desc: 'Verifikasi 5 benar & dispensing batch' },
-      { id: 'expiry_monitoring', label: 'Monitoring Kadaluwarsa', desc: 'Batch < 60 hari & stok kritis' },
-      { id: 'damage_report', label: 'Laporan Obat Rusak', desc: 'Pencatatan obat pecah/rusak' },
+      { id: 'stock_monitoring', label: 'Peringatan Stok', desc: 'Monitoring obat menipis & stok kritis' },
       { id: 'dispensed_history', label: 'Riwayat Penyerahan', desc: 'Daftar obat yang telah diserahkan' },
       { id: 'reports', label: 'Laporan Rekapitulasi', desc: 'Rekapitulasi farmasi periodik' }
     ],
     admin: [
       { id: 'dashboard', label: 'Dashboard Operasional', desc: 'Ringkasan inventori dan stok' },
       { id: 'inventory_master', label: 'Master Obat & Satuan', desc: 'Katalog obat, multi-satuan & barcode' },
-      { id: 'restock_batches', label: 'Penerimaan Batch (Restock)', desc: 'Penerimaan barang dari PBF' },
-      { id: 'returns_audit', label: 'Retur PBF & Audit', desc: 'Pengembalian supplier dan log opname' },
+      { id: 'restock_batches', label: 'Penerimaan Batch (Restock)', desc: 'Penerimaan stok batch obat masuk' },
       { id: 'logistics_overview', label: 'Tata Letak Rak', desc: 'Posisi rak penyimpanan fisik' },
       { id: 'reports', label: 'Laporan Rekapitulasi', desc: 'Rekapitulasi logistik dan peresepan' }
     ]
@@ -89,17 +87,12 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
           category: 'Instalasi Farmasi',
           desc: 'Verifikasi 5 benar, rekomendasi batch terdekat (FEFO), dan cetak etiket aturan pakai'
         };
+      case 'stock_monitoring':
       case 'expiry_monitoring':
         return {
-          title: 'Monitoring ED & Stok Menipis',
+          title: 'Peringatan Stok Obat',
           category: 'Instalasi Farmasi',
-          desc: 'Daftar batch berumur < 60 hari dan obat di bawah batas minimum'
-        };
-      case 'damage_report':
-        return {
-          title: 'Laporan Kerusakan & Retur Farmasi',
-          category: 'Instalasi Farmasi',
-          desc: 'Pencatatan obat pecah, rusak, atau ditarik distributor di rak fisik'
+          desc: 'Monitoring obat di bawah batas minimum dan evaluasi stok kritis klinik'
         };
       case 'dispensed_history':
         return {
@@ -119,13 +112,7 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
         return {
           title: 'Penerimaan Batch Masuk (Restock)',
           category: 'Logistik & Gudang',
-          desc: 'Pencatatan batch fisik diterima dari PBF dan kalkulasi otomatis ke base unit'
-        };
-      case 'returns_audit':
-        return {
-          title: 'Retur PBF & Audit BPOM',
-          category: 'Logistik & Gudang',
-          desc: 'Dokumentasi resmi pengembalian ke supplier dan rekonsiliasi opname'
+          desc: 'Pencatatan batch fisik diterima dan kalkulasi otomatis ke base unit'
         };
       case 'logistics_overview':
         return {

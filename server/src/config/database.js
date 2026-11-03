@@ -10,9 +10,10 @@ if (!fs.existsSync(dataDir)) {
 const dbPath = process.env.DB_PATH || path.join(dataDir, 'klinik_almedika.db');
 const db = new Database(dbPath);
 
-// Enable foreign keys and WAL mode for high concurrency
+// Enable foreign keys, WAL mode, and busy timeout for high concurrency
 db.pragma('foreign_keys = ON');
 db.pragma('journal_mode = WAL');
+db.pragma('busy_timeout = 5000');
 
 function initSchema() {
   db.exec(`

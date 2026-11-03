@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
-  FileText, 
   History, 
   Pill, 
   Clock, 
   AlertTriangle, 
   Package, 
   Boxes, 
-  RotateCcw, 
   ShieldCheck, 
   Layers, 
   FileEdit, 
@@ -108,14 +106,9 @@ export default function Sidebar({ activeSubTab, setActiveSubTab, mobileOpen, set
             isCito: queueStats.cito > 0
           },
           { 
-            id: 'expiry_monitoring', 
-            label: 'Peringatan ED & Stok', 
+            id: 'stock_monitoring', 
+            label: 'Peringatan Stok', 
             icon: AlertTriangle 
-          },
-          { 
-            id: 'damage_report', 
-            label: 'Lapor Rusak / Retur', 
-            icon: RotateCcw 
           },
           { 
             id: 'dispensed_history', 
@@ -135,13 +128,8 @@ export default function Sidebar({ activeSubTab, setActiveSubTab, mobileOpen, set
           },
           { 
             id: 'restock_batches', 
-            label: 'Penerimaan Batch PBF', 
+            label: 'Penerimaan Batch', 
             icon: Package 
-          },
-          { 
-            id: 'returns_audit', 
-            label: 'Retur PBF & Audit BPOM', 
-            icon: FileText 
           },
           { 
             id: 'logistics_overview', 

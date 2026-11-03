@@ -6,9 +6,11 @@ function createTestApp() {
   app.use(express.json());
 
   // Mock Socket.io instance so controller events don't throw
-  app.set('io', {
-    emit: () => {}
-  });
+  const mockIo = {
+    emit: () => mockIo,
+    to: () => mockIo
+  };
+  app.set('io', mockIo);
 
   app.use('/api', apiRoutes);
   return app;

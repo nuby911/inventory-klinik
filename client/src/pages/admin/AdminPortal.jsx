@@ -7,7 +7,6 @@ import {
   CheckCircle2 
 } from 'lucide-react';
 import { api } from '../../services/api';
-import { useAuth } from '../../context/useAuth';
 import { useSocket } from '../../context/useSocket';
 import { parseGS1Barcode, matchMedicineFromScan } from '../../utils/gs1Parser';
 
@@ -23,13 +22,11 @@ function generateBatchDefaults(med) {
     expired_date: nextYear,
     unit_selected: defaultUnit,
     quantity_input: 5,
-    distributor: 'Kimia Farma Trading',
     rack_location: med.rack_location || 'Rak Utama'
   };
 }
 
 export default function AdminPortal({ activeSubTab }) {
-  const { currentUser } = useAuth();
   const { socket } = useSocket();
   // Inventory State
   const [medicines, setMedicines] = useState([]);
@@ -39,10 +36,6 @@ export default function AdminPortal({ activeSubTab }) {
 
   // Batches
   const [batches, setBatches] = useState([]);
-
-  // Adjustments (Audit Trail)
-  const [adjustments, setAdjustments] = useState([]);
-  const [filterType, setFilterType] = useState('all');
 
   // Modals & Forms
   const [restockModalOpen, setRestockModalOpen] = useState(false);
@@ -63,7 +56,6 @@ export default function AdminPortal({ activeSubTab }) {
     expired_date: '',
     unit_selected: '',
     quantity_input: 5,
-    distributor: 'Kimia Farma Trading',
     rack_location: ''
   });
 
@@ -81,15 +73,6 @@ export default function AdminPortal({ activeSubTab }) {
     barcode: ''
   });
 
-  // Return to PBF Form State
-  const [returnForm, setReturnForm] = useState({
-    batch_id: '',
-    quantity_input: 10,
-    adjustment_type: 'retur_supplier',
-    reason: 'Cacat kemasan blister pabrik dan mendekati ED < 60 hari',
-    distributor: 'Enseval Putera Megatrading'
-  });
-
   const [actionSuccess, setActionSuccess] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -97,26 +80,21 @@ export default function AdminPortal({ activeSubTab }) {
   const loadAllData = useCallback(async () => {
     try {
       setLoading(true);
-      const [medsRes, kpiRes, batchRes, adjRes] = await Promise.all([
+      const [medsRes, kpiRes, batchRes] = await Promise.all([
         api.getMedicines(),
         api.getMedicineKpis(),
-        api.getBatches(),
-        api.getAdjustments()
+        api.getBatches()
       ]);
       setMedicines(medsRes.data);
       setKpis(kpiRes.data);
       setBatches(batchRes.data);
-      if (batchRes.data.length > 0 && !returnForm.batch_id) {
-        setReturnForm(prev => ({ ...prev, batch_id: batchRes.data[0].id }));
-      }
-      setAdjustments(adjRes.data);
     } catch (e) {
       console.error('loadAllData error:', e);
       setActionError('Gagal memuat data inventori: ' + (e.message || 'Koneksi error'));
     } finally {
       setLoading(false);
     }
-  }, [returnForm.batch_id]);
+  }, []);
 
   useEffect(() => {
     loadAllData();
@@ -158,7 +136,6 @@ export default function AdminPortal({ activeSubTab }) {
         expired_date: parsed.expiredDate || parsed.expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         unit_selected: defaultUnit,
         quantity_input: 5,
-        distributor: 'Kimia Farma Trading',
         rack_location: matched.rack_location || 'Rak Utama'
       });
       setScanVerification(parsed);
@@ -192,7 +169,6 @@ export default function AdminPortal({ activeSubTab }) {
       expired_date: parsed.expiredDate || parsed.expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       unit_selected: defaultUnit,
       quantity_input: 5,
-      distributor: 'Kimia Farma Trading',
       rack_location: targetMed.rack_location || 'Rak Utama'
     });
     setScanVerification(parsed);
@@ -222,7 +198,6 @@ export default function AdminPortal({ activeSubTab }) {
         expired_date: restockForm.expired_date,
         unit_selected: restockForm.unit_selected,
         quantity_input: Number(restockForm.quantity_input),
-        distributor: restockForm.distributor,
         rack_location: restockForm.rack_location
       });
       setActionSuccess(`Batch ${restockForm.batch_number} berhasil dicatat.`);
@@ -269,42 +244,12 @@ export default function AdminPortal({ activeSubTab }) {
     }
   };
 
-  const handleReturnSubmit = async (e) => {
-    e.preventDefault();
-    if (!returnForm.batch_id) return;
-    const selectedBatch = batches.find(b => b.id === Number(returnForm.batch_id));
-    const qty = Number(returnForm.quantity_input);
-    if (selectedBatch && qty > selectedBatch.stock_qty) {
-      setActionError(`Jumlah retur (${qty} ${selectedBatch.base_unit}) melebihi sisa stok fisik batch (${selectedBatch.stock_qty} ${selectedBatch.base_unit}).`);
-      return;
-    }
-    try {
-      const res = await api.createAdjustment({
-        batch_id: Number(returnForm.batch_id),
-        user_id: currentUser?.id || 3,
-        adjustment_type: returnForm.adjustment_type,
-        quantity_input: qty,
-        reason: returnForm.reason,
-        distributor: returnForm.distributor
-      });
-      setActionSuccess(res.message);
-      loadAllData();
-      setTimeout(() => setActionSuccess(null), 4000);
-    } catch (err) {
-      setActionError(err.message || 'Gagal menyimpan retur');
-    }
-  };
-
   const filteredMeds = medicines.filter(m => {
     const matchQuery = m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                        m.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
                        (m.rack_location && m.rack_location.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchCat = selectedCategory === 'Semua' || m.category.toLowerCase() === selectedCategory.toLowerCase();
     return matchQuery && matchCat;
-  });
-
-  const filteredAdjustments = adjustments.filter(a => {
-    return filterType === 'all' || a.adjustment_type === filterType;
   });
 
   return (
@@ -552,7 +497,7 @@ export default function AdminPortal({ activeSubTab }) {
               <div className="font-bold text-xs uppercase tracking-wide text-slate-800">
                 Daftar Batch Obat Fisik di Rak
               </div>
-              <div className="text-[11px] text-slate-500">Pelacakan nomor batch, tanggal kadaluarsa, dan distributor PBF</div>
+              <div className="text-[11px] text-slate-500">Pelacakan nomor batch, tanggal kadaluarsa, dan lokasi rak fisik</div>
             </div>
             <button
               onClick={loadAllData}
@@ -571,7 +516,6 @@ export default function AdminPortal({ activeSubTab }) {
                   <th className="py-2.5 px-3">Tanggal Expired</th>
                   <th className="py-2.5 px-3">Stok Batch</th>
                   <th className="py-2.5 px-3">Lokasi Rak</th>
-                  <th className="py-2.5 px-3">PBF / Distributor</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -582,7 +526,6 @@ export default function AdminPortal({ activeSubTab }) {
                     <td className="py-2.5 px-3 font-bold">{b.expired_date}</td>
                     <td className="py-2.5 px-3 font-semibold text-slate-800">{b.stock_qty} {b.base_unit}</td>
                     <td className="py-2.5 px-3">{b.rack_location || 'Rak Utama'}</td>
-                    <td className="py-2.5 px-3 text-slate-500">{b.distributor || '-'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -592,133 +535,7 @@ export default function AdminPortal({ activeSubTab }) {
       </div>
     )}
 
-      {/* SubTab 3: Retur PBF & Audit Trail */}
-      {activeSubTab === 'returns_audit' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-5 bg-white rounded-lg border border-slate-200 p-4 space-y-3 text-xs">
-            <div className="font-bold text-xs uppercase tracking-wide text-slate-800 border-b border-slate-200 pb-2">
-              Formulir Retur Supplier (PBF)
-            </div>
-
-            <form onSubmit={handleReturnSubmit} className="space-y-3">
-              <div>
-                <label className="text-slate-600 block mb-1 font-semibold">Pilih Batch Retur:</label>
-                <select
-                  value={returnForm.batch_id}
-                  onChange={(e) => setReturnForm({ ...returnForm, batch_id: e.target.value })}
-                  className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-slate-800"
-                >
-                  {batches.map(b => (
-                    <option key={b.id} value={b.id}>
-                      {b.medicine_name} — #{b.batch_number} ({b.stock_qty} {b.base_unit} | Exp: {b.expired_date})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-slate-600 block mb-1 font-semibold">Jumlah Retur:</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={returnForm.quantity_input}
-                    onChange={(e) => setReturnForm({ ...returnForm, quantity_input: e.target.value })}
-                    className="w-full font-bold bg-white border border-slate-300 rounded px-2 py-1 text-slate-800"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-600 block mb-1 font-semibold">Tipe Penyesuaian:</label>
-                  <select
-                    value={returnForm.adjustment_type}
-                    onChange={(e) => setReturnForm({ ...returnForm, adjustment_type: e.target.value })}
-                    className="w-full bg-white border border-slate-300 rounded px-2 py-1"
-                  >
-                    <option value="retur_supplier">Retur ke PBF</option>
-                    <option value="stock_opname_adjustment">Stok Opname</option>
-                    <option value="expired_disposal">Pemusnahan ED</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-slate-600 block mb-1 font-semibold">Nama PBF / Distributor:</label>
-                <input
-                  type="text"
-                  value={returnForm.distributor}
-                  onChange={(e) => setReturnForm({ ...returnForm, distributor: e.target.value })}
-                  className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-600 block mb-1 font-semibold">Alasan Retur / Berita Acara:</label>
-                <textarea
-                  rows="2"
-                  required
-                  value={returnForm.reason}
-                  onChange={(e) => setReturnForm({ ...returnForm, reason: e.target.value })}
-                  className="w-full bg-white border border-slate-300 rounded p-2 text-slate-800"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded font-medium cursor-pointer"
-              >
-                Catat Retur & Potong Stok Batch
-              </button>
-            </form>
-          </div>
-
-          <div className="lg:col-span-7 bg-white rounded-lg border border-slate-200 p-4 space-y-3 text-xs">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <span className="font-bold uppercase tracking-wide text-slate-800">
-                Log Audit Mutasi Stok (Standar BPOM)
-              </span>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="text-xs bg-white border border-slate-300 rounded px-2 py-0.5"
-              >
-                <option value="all">Semua Tipe</option>
-                <option value="retur_supplier">Retur PBF</option>
-                <option value="damaged">Rusak/Pecah</option>
-                <option value="expired_disposal">Pemusnahan</option>
-                <option value="stock_opname_adjustment">Opname</option>
-              </select>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-600">
-                <thead className="bg-slate-50 text-slate-800 font-bold uppercase text-[10px] border-y border-slate-200">
-                  <tr>
-                    <th className="py-2.5 px-2.5">No. Ref</th>
-                    <th className="py-2.5 px-2">Obat & Batch</th>
-                    <th className="py-2.5 px-2">Jenis</th>
-                    <th className="py-2.5 px-2 text-right">Potong</th>
-                    <th className="py-2.5 px-2.5">Keterangan</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredAdjustments.map(adj => (
-                    <tr key={adj.id} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-2.5 font-mono font-bold text-slate-900 text-[11px]">{adj.adjustment_code}</td>
-                      <td className="py-2.5 px-2 font-semibold text-slate-800">{adj.medicine_name} (#{adj.batch_number})</td>
-                      <td className="py-2.5 px-2 text-[10px] uppercase font-semibold text-slate-700">{adj.adjustment_type}</td>
-                      <td className="py-2.5 px-2 text-right font-mono font-bold text-rose-700">-{adj.quantity_base_unit} {adj.base_unit}</td>
-                      <td className="py-2.5 px-2.5 text-slate-600">{adj.reason}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SubTab 4: Ringkasan Stok & Rak */}
+      {/* SubTab 3: Ringkasan Stok & Rak */}
       {activeSubTab === 'logistics_overview' && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
@@ -860,16 +677,6 @@ export default function AdminPortal({ activeSubTab }) {
                     className="w-full bg-white border border-slate-300 rounded px-2 py-1"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="text-slate-700 block mb-1 font-semibold">Distributor (PBF):</label>
-                <input
-                  type="text"
-                  value={restockForm.distributor}
-                  onChange={(e) => setRestockForm({ ...restockForm, distributor: e.target.value })}
-                  className="w-full bg-white border border-slate-300 rounded px-2 py-1"
-                />
               </div>
 
               <div className="pt-2 border-t border-slate-200 flex items-center justify-end gap-2">
