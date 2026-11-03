@@ -38,7 +38,7 @@ const ROUTE_RULES = {
     subtabs: ['dashboard', 'reports', 'write_prescription', 'prescription_history', 'medicine_catalog']
   },
   apoteker: {
-    name: 'Apoteker FEFO',
+    name: 'Apoteker',
     defaultTab: 'dashboard',
     allowedKeywords: ['apoteker', 'pharmacy', 'farmasi', 'queue_dispensing', 'stock_monitoring', 'expiry_monitoring', 'dispensed_history', 'dashboard', 'reports', 'laporan'],
     subtabs: ['dashboard', 'reports', 'queue_dispensing', 'stock_monitoring', 'dispensed_history']

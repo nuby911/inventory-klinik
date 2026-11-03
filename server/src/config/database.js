@@ -134,7 +134,7 @@ function initSchema() {
     CREATE INDEX IF NOT EXISTS idx_units_med_ratio ON medicine_units(medicine_id, conversion_ratio DESC);
     CREATE INDEX IF NOT EXISTS idx_batches_med_fefo ON medicine_batches(medicine_id, stock_qty, expired_date ASC);
     CREATE INDEX IF NOT EXISTS idx_batches_expiry ON medicine_batches(expired_date ASC);
-    CREATE INDEX IF NOT EXISTS idx_prescriptions_status_cito ON prescriptions(status, is_cito DESC, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_prescriptions_status_created ON prescriptions(status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_prescriptions_patient ON prescriptions(patient_id);
     CREATE INDEX IF NOT EXISTS idx_prescriptions_doctor ON prescriptions(doctor_id);
     CREATE INDEX IF NOT EXISTS idx_prescription_items_rx ON prescription_items(prescription_id);

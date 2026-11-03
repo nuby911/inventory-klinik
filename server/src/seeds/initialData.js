@@ -125,10 +125,10 @@ function seedDatabase() {
     insertBatch.run(m8, 'BCH-DEX-2027A', '2027-12-01', 250, 'Rak A-07', 'Kimia Farma Trading');
 
     // 4. Initial Prescriptions
-    // 4.1 CITO Live Queue (Matching Stitch Screen 2: Budi Santoso)
+    // 4.1 Live Queue
     const now = new Date();
     const rx1Time = new Date(now.getTime() - 4 * 60000).toISOString();
-    const rx1 = insertPrescription.run('ER-2026-0024', p1, u1, 'pending', 1, 'Pasien demam tinggi 38.8C + batuk pilek 3 hari. Mohon diprioritaskan segera.', rx1Time).lastInsertRowid;
+    const rx1 = insertPrescription.run('ER-2026-0024', p1, u1, 'pending', 0, 'Pasien demam tinggi 38.8C + batuk pilek 3 hari.', rx1Time).lastInsertRowid;
     insertPrescriptionItem.run(rx1, m1, 'Strip', 2, 20, '3 x 1 Tablet Sehari Sesudah Makan', 0, null, 'Habiskan bila demam berlanjut');
     insertPrescriptionItem.run(rx1, m4, 'Strip', 1, 10, '1 x 1 Tablet Malam Sebelum Tidur', 0, null, 'Bila bersin/gatal');
 

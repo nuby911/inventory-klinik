@@ -70,7 +70,7 @@ async function login(req, res) {
       title = 'Dokter Spesialis Rawat Jalan';
       badgeColor = 'bg-emerald-100 text-emerald-800 border-emerald-300';
     } else if (user.role === 'apoteker') {
-      title = 'Kepala Instalasi Farmasi (FEFO)';
+      title = 'Kepala Instalasi Farmasi';
       badgeColor = 'bg-teal-100 text-teal-800 border-teal-300';
     } else if (user.role === 'admin') {
       title = 'Staff Logistik & Pengelolaan Stok';

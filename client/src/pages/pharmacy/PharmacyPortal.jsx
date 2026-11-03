@@ -143,7 +143,7 @@ export default function PharmacyPortal({ activeSubTab }) {
 
     try {
       await api.dispensePrescription(selectedRx.id);
-      setActionSuccess('Dispensing selesai. Stok batch FEFO otomatis terpotong.');
+      setActionSuccess('Dispensing selesai. Stok obat berhasil dipotong.');
       loadRxDetail(selectedRx.id);
       loadPrescriptions();
       loadStockAlerts();
@@ -175,7 +175,6 @@ export default function PharmacyPortal({ activeSubTab }) {
     return matchesSearch && matchesStatus;
   });
 
-  const citoCount = prescriptions.filter(p => p.is_cito === 1 && p.status !== 'completed').length;
   const waitingCount = prescriptions.filter(p => p.status === 'pending').length;
   const preparingCount = prescriptions.filter(p => p.status === 'preparing').length;
   const completedCount = prescriptions.filter(p => p.status === 'completed').length;
@@ -203,15 +202,11 @@ export default function PharmacyPortal({ activeSubTab }) {
         </div>
       )}
 
-      {/* SubTab 1: Antrean & Dispensing FEFO */}
+      {/* SubTab 1: Antrean & Penyiapan Resep */}
       {activeSubTab === 'queue_dispensing' && (
         <div className="space-y-4">
           {/* Quick Counters Strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div className="bg-white p-3 rounded-lg border border-slate-200">
-              <div className="text-[10px] font-semibold text-slate-500 uppercase">Resep CITO</div>
-              <div className="text-xl font-bold text-rose-700 mt-0.5">{citoCount}</div>
-            </div>
             <div className="bg-white p-3 rounded-lg border border-slate-200">
               <div className="text-[10px] font-semibold text-slate-500 uppercase">Menunggu</div>
               <div className="text-xl font-bold text-slate-800 mt-0.5">{waitingCount}</div>
@@ -223,6 +218,10 @@ export default function PharmacyPortal({ activeSubTab }) {
             <div className="bg-white p-3 rounded-lg border border-slate-200">
               <div className="text-[10px] font-semibold text-slate-500 uppercase">Selesai Hari Ini</div>
               <div className="text-xl font-bold text-slate-800 mt-0.5">{completedCount}</div>
+            </div>
+            <div className="bg-white p-3 rounded-lg border border-slate-200">
+              <div className="text-[10px] font-semibold text-slate-500 uppercase">Total Antrean</div>
+              <div className="text-xl font-bold text-slate-800 mt-0.5">{prescriptions.length}</div>
             </div>
           </div>
 
@@ -278,11 +277,6 @@ export default function PharmacyPortal({ activeSubTab }) {
                         <div>
                           <div className="flex items-center gap-1.5">
                             <span className="font-mono font-bold text-slate-900">{rx.prescription_code}</span>
-                            {rx.is_cito === 1 && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.2 bg-rose-600 text-white rounded">
-                                CITO
-                              </span>
-                            )}
                           </div>
                           <div className="font-semibold text-slate-800 mt-0.5">{rx.patient_name}</div>
                           <div className="text-[11px] text-slate-500">{rx.medical_record_number} • {rx.doctor_name}</div>
@@ -320,11 +314,6 @@ export default function PharmacyPortal({ activeSubTab }) {
                         <span className="font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                           {selectedRx.medical_record_number}
                         </span>
-                        {selectedRx.is_cito === 1 && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-rose-600 text-white rounded">
-                            CITO
-                          </span>
-                        )}
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5">
                         No. Resep: <span className="font-mono">{selectedRx.prescription_code}</span> • Dokter: {selectedRx.doctor_name}
@@ -342,10 +331,10 @@ export default function PharmacyPortal({ activeSubTab }) {
                     </div>
                   )}
 
-                  {/* Items & FEFO Recommendation */}
+                  {/* Items List */}
                   <div className="space-y-2.5">
                     <div className="font-bold text-xs text-slate-800 uppercase tracking-wide">
-                      Alokasi Batch FEFO
+                      Daftar Obat Resep
                     </div>
 
                     {selectedRx.items && selectedRx.items.map((item, idx) => (
@@ -368,23 +357,6 @@ export default function PharmacyPortal({ activeSubTab }) {
                             {item.dosage_instruction}
                           </span>
                         </div>
-
-                        {item.fefoPreview && (
-                          <div className="p-2 bg-white border border-slate-200 rounded text-[11px] space-y-1">
-                            <div className="font-semibold text-slate-700">
-                              Rekomendasi Batch FEFO:
-                            </div>
-                            {item.fefoPreview.allocation.map((alloc, aIdx) => (
-                              <div key={aIdx} className="flex items-center justify-between font-mono text-slate-600">
-                                <div>
-                                  <span className="font-bold text-slate-900">Batch #{alloc.batchNumber}</span>
-                                  <span className="ml-2">Exp: {alloc.expiredDate}</span>
-                                </div>
-                                <span className="font-bold text-slate-800">Ambil {alloc.takeQty} {item.base_unit}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -622,7 +594,7 @@ export default function PharmacyPortal({ activeSubTab }) {
                     <td className="py-2.5 px-3 text-[11px]">{new Date(rx.created_at).toLocaleTimeString('id-ID')} WIB</td>
                     <td className="py-2.5 px-3">
                       <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded font-semibold text-[10px] border border-emerald-200">
-                        Diserahkan (FEFO Cut)
+                        Diserahkan
                       </span>
                     </td>
                   </tr>

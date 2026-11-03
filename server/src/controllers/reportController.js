@@ -55,8 +55,7 @@ function getRecapReport(req, res) {
         SUM(CASE WHEN p.status = 'completed' THEN 1 ELSE 0 END) as completed_count,
         SUM(CASE WHEN p.status = 'preparing' THEN 1 ELSE 0 END) as preparing_count,
         SUM(CASE WHEN p.status = 'pending' THEN 1 ELSE 0 END) as pending_count,
-        SUM(CASE WHEN p.status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count,
-        SUM(CASE WHEN p.is_cito = 1 THEN 1 ELSE 0 END) as cito_count
+        SUM(CASE WHEN p.status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count
       FROM prescriptions p
       ${whereClause}
     `).get(...params);
@@ -67,7 +66,6 @@ function getRecapReport(req, res) {
         p.id,
         p.prescription_code,
         p.status,
-        p.is_cito,
         p.notes,
         p.created_at,
         pat.name as patient_name,
@@ -111,7 +109,7 @@ function getRecapReport(req, res) {
         DATE(p.created_at) as date,
         COUNT(*) as total,
         SUM(CASE WHEN p.status = 'completed' THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN p.is_cito = 1 THEN 1 ELSE 0 END) as cito
+        SUM(CASE WHEN p.status = 'pending' THEN 1 ELSE 0 END) as pending
       FROM prescriptions p
       ${whereClause}
       GROUP BY DATE(p.created_at)
@@ -150,7 +148,6 @@ function getRecapReport(req, res) {
           preparingPrescriptions: rxSummary?.preparing_count || 0,
           pendingPrescriptions: rxSummary?.pending_count || 0,
           cancelledPrescriptions: rxSummary?.cancelled_count || 0,
-          citoPrescriptions: rxSummary?.cito_count || 0,
           completionRate,
           totalAdjustments: adjustmentSummary?.total_adjustments || 0,
           totalAdjustedUnits: adjustmentSummary?.total_adjusted_units || 0,

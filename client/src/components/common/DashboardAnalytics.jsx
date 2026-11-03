@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   FileText,
-  AlertTriangle,
   Clock,
   Pill,
   CheckCircle2,
@@ -84,7 +83,6 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
     const pending = prescriptions.filter(p => p.status === 'pending').length;
     const preparing = prescriptions.filter(p => p.status === 'preparing').length;
     const completed = prescriptions.filter(p => p.status === 'completed').length;
-    const cito = prescriptions.filter(p => p.is_cito === 1 && p.status !== 'completed').length;
 
     const lowStock = medicines.filter(m => m.stockStatus === 'Kritis' || m.stockStatus === 'Habis');
     const warningStock = medicines.filter(m => m.stockStatus === 'Menipis');
@@ -93,7 +91,6 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
       pending,
       preparing,
       completed,
-      cito,
       lowStockCount: lowStock.length,
       warningStockCount: warningStock.length,
       lowStockMeds: [...lowStock, ...warningStock].slice(0, 5),
@@ -103,7 +100,6 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
   // Antrean Terfilter
   const filteredPrescriptions = useMemo(() => {
     return prescriptions.filter(rx => {
-      if (statusFilter === 'cito' && rx.is_cito !== 1) return false;
       if (statusFilter === 'pending' && rx.status !== 'pending') return false;
       if (statusFilter === 'preparing' && rx.status !== 'preparing') return false;
       if (statusFilter === 'completed' && rx.status !== 'completed') return false;
@@ -203,26 +199,22 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
           </div>
         </div>
 
-        {/* Metrik 2: Resep CITO */}
-        <div className={`p-4.5 rounded-2xl border shadow-2xs ${
-          metrics.cito > 0 
-            ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-500/20' 
-            : 'bg-white border-slate-200'
-        }`}>
+        {/* Metrik 2: Sedang Diracik */}
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
-            <span className={`text-xs ${metrics.cito > 0 ? 'text-[#ec1415] font-bold' : 'text-slate-500 font-semibold'}`}>
-              Resep CITO (Darurat)
+            <span className="text-xs font-semibold text-slate-500">
+              Sedang Diracik
             </span>
-            <AlertTriangle className={`w-4 h-4 ${metrics.cito > 0 ? 'text-[#ec1415]' : 'text-slate-400'}`} />
+            <Clock className="w-4 h-4 text-blue-600" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
-            <span className={`text-2xl font-bold ${metrics.cito > 0 ? 'text-[#ec1415]' : 'text-slate-900'}`}>
-              {metrics.cito}
+            <span className="text-2xl font-bold text-slate-900">
+              {metrics.preparing}
             </span>
-            <span className={`text-xs ${metrics.cito > 0 ? 'text-[#ec1415]' : 'text-slate-500'}`}>resep aktif</span>
+            <span className="text-xs text-slate-500">resep</span>
           </div>
-          <div className={`mt-2 text-[11px] ${metrics.cito > 0 ? 'text-[#ec1415] font-medium' : 'text-slate-500'}`}>
-            {metrics.cito > 0 ? 'Harus segera diprioritaskan' : 'Tidak ada antrean darurat'}
+          <div className="mt-2 text-[11px] text-slate-500">
+            Sedang dalam penyiapan farmasi
           </div>
         </div>
 
@@ -237,7 +229,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
             <span className="text-xs text-slate-500">resep</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-500">
-            Dispensed sesuai urutan FEFO
+            Resep selesai dilayani
           </div>
         </div>
 
@@ -271,7 +263,6 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
             <div className="flex items-center gap-1.5 overflow-x-auto">
               {[
                 { id: 'all', label: 'Semua', count: prescriptions.length },
-                { id: 'cito', label: 'CITO', count: metrics.cito, alert: metrics.cito > 0 },
                 { id: 'pending', label: 'Menunggu', count: metrics.pending },
                 { id: 'preparing', label: 'Diracik', count: metrics.preparing },
                 { id: 'completed', label: 'Selesai', count: metrics.completed },
@@ -333,14 +324,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
                   {filteredPrescriptions.map(rx => (
                     <tr key={rx.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3 px-3.5 font-mono text-slate-900 font-medium">
-                        <div className="flex items-center gap-1.5">
-                          <span>{rx.prescription_code}</span>
-                          {rx.is_cito === 1 && (
-                            <span className="px-1.5 py-0.5 bg-[#ec1415] text-white text-[9px] font-bold rounded">
-                              CITO
-                            </span>
-                          )}
-                        </div>
+                        <span>{rx.prescription_code}</span>
                       </td>
 
                       <td className="py-3 px-3.5">

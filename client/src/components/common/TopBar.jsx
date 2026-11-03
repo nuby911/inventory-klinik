@@ -25,7 +25,7 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
     ],
     apoteker: [
       { id: 'dashboard', label: 'Dashboard Operasional', desc: 'Ringkasan antrean dan stok obat' },
-      { id: 'queue_dispensing', label: 'Antrean Farmasi FEFO', desc: 'Verifikasi 5 benar & dispensing batch' },
+      { id: 'queue_dispensing', label: 'Antrean Resep Farmasi', desc: 'Verifikasi 5 benar & penyiapan obat' },
       { id: 'stock_monitoring', label: 'Peringatan Stok', desc: 'Monitoring obat menipis & stok kritis' },
       { id: 'dispensed_history', label: 'Riwayat Penyerahan', desc: 'Daftar obat yang telah diserahkan' },
       { id: 'reports', label: 'Laporan Rekapitulasi', desc: 'Rekapitulasi farmasi periodik' }
@@ -83,9 +83,9 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
       // Pharmacy
       case 'queue_dispensing':
         return {
-          title: 'Antrean Farmasi & Dispensing FEFO',
+          title: 'Antrean Resep Farmasi',
           category: 'Instalasi Farmasi',
-          desc: 'Verifikasi 5 benar, rekomendasi batch terdekat (FEFO), dan cetak etiket aturan pakai'
+          desc: 'Verifikasi 5 benar dan cetak etiket aturan pakai obat'
         };
       case 'stock_monitoring':
       case 'expiry_monitoring':
@@ -134,13 +134,11 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
 
   return (
     <div className="bg-gradient-to-r from-[#091f36] via-[#0f3d6b] to-[#155ea3] text-white shadow-sm transition-all border-b border-white/15">
-      {/* CITO Alert Banner (If Any) */}
+      {/* Alert Banner (If Any) */}
       {incomingAlert && (
-        <div className={`px-6 py-2.5 flex items-center justify-between text-xs font-semibold ${
-          incomingAlert.isCito ? 'bg-[#ec1415] text-white animate-pulse shadow-md' : 'bg-[#091f36] text-white'
-        }`}>
+        <div className="px-6 py-2.5 flex items-center justify-between text-xs font-semibold bg-[#0f3d6b] text-white border-b border-white/20">
           <div className="flex items-center gap-2">
-            <span className="font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded">
+            <span className="font-bold uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded">
               {incomingAlert.title}:
             </span>
             <span>{incomingAlert.message}</span>

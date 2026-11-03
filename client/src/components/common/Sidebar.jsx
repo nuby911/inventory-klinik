@@ -20,15 +20,14 @@ import { api } from '../../services/api';
 export default function Sidebar({ activeSubTab, setActiveSubTab, mobileOpen, setMobileOpen }) {
   const { currentUser, logout } = useAuth();
   const { isConnected, socket } = useSocket();
-  const [queueStats, setQueueStats] = useState({ cito: 0, waiting: 0 });
+  const [queueStats, setQueueStats] = useState({ waiting: 0 });
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const res = await api.getPrescriptions({ status: 'pending' });
         if (res.data) {
-          const cito = res.data.filter(p => p.is_cito === 1).length;
-          setQueueStats({ cito, waiting: res.data.length });
+          setQueueStats({ waiting: res.data.length });
         }
       } catch {
         // silent
@@ -100,10 +99,9 @@ export default function Sidebar({ activeSubTab, setActiveSubTab, mobileOpen, set
         items: [
           { 
             id: 'queue_dispensing', 
-            label: 'Antrean & Dispensing FEFO', 
+            label: 'Antrean Resep Farmasi', 
             icon: Clock,
-            badge: queueStats.cito > 0 ? `${queueStats.cito} CITO` : queueStats.waiting > 0 ? `${queueStats.waiting}` : null,
-            isCito: queueStats.cito > 0
+            badge: queueStats.waiting > 0 ? `${queueStats.waiting}` : null
           },
           { 
             id: 'stock_monitoring', 
@@ -220,11 +218,9 @@ export default function Sidebar({ activeSubTab, setActiveSubTab, mobileOpen, set
 
                       {item.badge && (
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          item.isCito 
-                            ? 'bg-[#ec1415] text-white animate-pulse shadow-xs' 
-                            : isActive 
-                              ? 'bg-white/25 text-white' 
-                              : 'bg-[#e8f2fc] text-[#155ea3]'
+                          isActive 
+                            ? 'bg-white/25 text-white' 
+                            : 'bg-[#e8f2fc] text-[#155ea3]'
                         }`}>
                           {item.badge}
                         </span>

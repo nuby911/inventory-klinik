@@ -73,7 +73,6 @@ export default function DoctorPortal({ activeSubTab }) {
   const [racikanSigna, setRacikanSigna] = useState('3 x 1 Bungkus Sesudah Makan');
 
   // Meta
-  const [isCito, setIsCito] = useState(false);
   const [doctorNotes, setDoctorNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [actionSuccess, setActionSuccess] = useState(null);
@@ -303,7 +302,6 @@ export default function DoctorPortal({ activeSubTab }) {
       const payload = {
         patient_id: selectedPatient.id,
         doctor_id: currentUser.id,
-        is_cito: isCito,
         notes: isRacikan ? `[RACIKAN: ${racikanName} (${racikanQty} Bungkus) - Signa: ${racikanSigna}] ${doctorNotes}`.trim() : doctorNotes,
         items: prescriptionItems.map(item => ({
           medicine_id: item.medicine_id,
@@ -320,7 +318,6 @@ export default function DoctorPortal({ activeSubTab }) {
       setActionSuccess(`E-Resep ${res.data.prescription_code} berhasil dikirim ke antrean apotek.`);
       setPrescriptionItems([]);
       setDoctorNotes('');
-      setIsCito(false);
       loadDoctorHistory();
       setTimeout(() => setActionSuccess(null), 4000);
     } catch (err) {
@@ -552,16 +549,6 @@ export default function DoctorPortal({ activeSubTab }) {
                       Resep Racikan
                     </button>
                   </div>
-
-                  <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={isCito}
-                      onChange={(e) => setIsCito(e.target.checked)}
-                      className="rounded border-slate-300 text-slate-900 focus:ring-0"
-                    />
-                    <span className={isCito ? 'text-rose-700 font-bold' : ''}>Status CITO (Segera)</span>
-                  </label>
                 </div>
 
                 {/* If Racikan is active, show the compound header configurator */}
@@ -818,11 +805,6 @@ export default function DoctorPortal({ activeSubTab }) {
                   <tr key={rx.id} className="hover:bg-slate-50">
                     <td className="py-2.5 px-3">
                       <span className="font-mono font-bold text-slate-900">{rx.prescription_code}</span>
-                      {rx.is_cito === 1 && (
-                        <span className="ml-1.5 text-[10px] font-bold px-1 py-0.2 bg-rose-600 text-white rounded">
-                          CITO
-                        </span>
-                      )}
                     </td>
                     <td className="py-2.5 px-3">
                       <div className="font-semibold text-slate-800">{rx.patient_name}</div>

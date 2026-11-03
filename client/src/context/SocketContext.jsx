@@ -38,9 +38,8 @@ export function SocketProvider({ children }) {
     socketInstance.on('prescription:new', (newRx) => {
       setIncomingAlert({
         type: 'prescription:new',
-        title: newRx.is_cito ? '🚨 RESEP CITO MASUK!' : '📋 E-Resep Baru Diterima',
+        title: '📋 E-Resep Baru Diterima',
         message: `${newRx.patient_name} (${newRx.medical_record_number}) - ${newRx.item_count} item obat`,
-        isCito: Boolean(newRx.is_cito),
         timestamp: new Date().toLocaleTimeString(),
       });
 
@@ -51,8 +50,8 @@ export function SocketProvider({ children }) {
           const audioCtx = new AudioCtx();
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
-          osc.type = newRx.is_cito ? 'sawtooth' : 'sine';
-          osc.frequency.setValueAtTime(newRx.is_cito ? 880 : 587.33, audioCtx.currentTime);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
           gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
           gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
           osc.connect(gain);

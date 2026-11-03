@@ -43,7 +43,7 @@ function checkAllergyConflict(allergyStr, contraStr) {
 
 function getPrescriptions(req, res) {
   try {
-    const { status, is_cito } = req.query;
+    const { status } = req.query;
     let query = `
       SELECT p.*, pt.name as patient_name, pt.medical_record_number, pt.allergies,
              pt.gender, pt.date_of_birth, pt.blood_type, pt.weight_kg, pt.insurance_type,
@@ -60,12 +60,8 @@ function getPrescriptions(req, res) {
       query += ` AND p.status = ?`;
       params.push(status);
     }
-    if (is_cito !== undefined && is_cito !== '') {
-      query += ` AND p.is_cito = ?`;
-      params.push(Number(is_cito));
-    }
 
-    query += ` ORDER BY p.is_cito DESC, p.created_at DESC`;
+    query += ` ORDER BY p.created_at DESC`;
 
     const prescriptions = db.prepare(query).all(...params);
     res.json({ success: true, data: prescriptions });
@@ -99,21 +95,11 @@ function getPrescriptionById(req, res) {
       WHERE pi.prescription_id = ?
     `).all(id);
 
-    // Attach FEFO allocation preview for each item (sharing simulated batch stock across items)
-    const simulatedBatchStock = new Map();
-    const itemsWithFEFO = items.map(item => {
-      const fefo = previewFEFOAllocation(item.medicine_id, item.quantity_base_unit, simulatedBatchStock);
-      return {
-        ...item,
-        fefoPreview: fefo
-      };
-    });
-
     res.json({
       success: true,
       data: {
         ...prescription,
-        items: itemsWithFEFO
+        items
       }
     });
   } catch (error) {
@@ -124,7 +110,7 @@ function getPrescriptionById(req, res) {
 
 function createPrescription(req, res) {
   try {
-    const { patient_id, patient_name, patient_gender, patient_date_of_birth, patient_allergies, is_cito, notes, items } = req.body;
+    const { patient_id, patient_name, patient_gender, patient_date_of_birth, patient_allergies, notes, items } = req.body;
     // Strict identity binding to authenticated session
     const doctor_id = req.user?.id || 1;
 
@@ -200,8 +186,8 @@ function createPrescription(req, res) {
 
       const insertRx = db.prepare(`
         INSERT INTO prescriptions (prescription_code, patient_id, doctor_id, status, is_cito, notes)
-        VALUES (?, ?, ?, 'pending', ?, ?)
-      `).run(prescription_code, resolvedPatientId, doctor_id, is_cito ? 1 : 0, notes || null);
+        VALUES (?, ?, ?, 'pending', 0, ?)
+      `).run(prescription_code, resolvedPatientId, doctor_id, notes || null);
 
       const rxId = insertRx.lastInsertRowid;
 
@@ -334,7 +320,7 @@ function dispensePrescription(req, res) {
 
     res.json({
       success: true,
-      message: 'Dispensing obat berhasil dieksekusi dengan algoritma FEFO dan tercatat di audit trail BPOM.',
+      message: 'Dispensing obat berhasil diproses dan stok telah diperbarui.',
       data: result
     });
   } catch (error) {

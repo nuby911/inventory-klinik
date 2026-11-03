@@ -10,7 +10,8 @@ import {
   Pill, 
   Search, 
   TrendingUp,
-  Activity
+  Activity,
+  Clock
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
@@ -59,7 +60,6 @@ export default function ReportRecapView() {
     preparingPrescriptions: 0,
     pendingPrescriptions: 0,
     cancelledPrescriptions: 0,
-    citoPrescriptions: 0,
     completionRate: 0,
     totalAdjustments: 0,
     totalAdjustedUnits: 0
@@ -103,7 +103,7 @@ export default function ReportRecapView() {
       return;
     }
 
-    const headers = ['No', 'Kode Resep', 'Tanggal & Waktu', 'No RM', 'Nama Pasien', 'Dokter', 'Jumlah R/', 'Daftar Obat', 'Status', 'Prioritas'];
+    const headers = ['No', 'Kode Resep', 'Tanggal & Waktu', 'No RM', 'Nama Pasien', 'Dokter', 'Jumlah R/', 'Daftar Obat', 'Status'];
     const rows = prescriptions.map((p, idx) => [
       idx + 1,
       `"${p.prescription_code}"`,
@@ -113,8 +113,7 @@ export default function ReportRecapView() {
       `"${p.doctor_name || '-'}"`,
       p.item_count || 0,
       `"${(p.medicines_summary || '-').replace(/"/g, '""')}"`,
-      `"${p.status}"`,
-      p.is_cito === 1 ? 'CITO' : 'Biasa'
+      `"${p.status}"`
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [
@@ -355,21 +354,21 @@ export default function ReportRecapView() {
             </div>
           </div>
 
-          {/* Card 3: CITO & Pending */}
+          {/* Card 3: Antrean Menunggu */}
           <div className="bg-white rounded-2xl p-5 border border-[#e2eef6] shadow-xs flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                Darurat / CITO
+                Antrean Menunggu
               </span>
-              <div className="text-2xl font-black text-rose-600">
-                {metrics.citoPrescriptions}
+              <div className="text-2xl font-black text-amber-600">
+                {metrics.pendingPrescriptions}
               </div>
               <div className="text-[11px] text-slate-500 font-medium">
-                Antrean menunggu: <span className="font-semibold text-slate-700">{metrics.pendingPrescriptions}</span>
+                Sedang diracik: <span className="font-semibold text-slate-700">{metrics.preparingPrescriptions}</span>
               </div>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <Clock className="w-6 h-6" />
             </div>
           </div>
 
@@ -435,7 +434,7 @@ export default function ReportRecapView() {
                         </div>
                       </div>
 
-                      {/* Progress FEFO Bar */}
+                      {/* Progress Bar */}
                       <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-linear-to-r from-[#155ea3] to-[#ec1415] rounded-full transition-all duration-300"
@@ -475,7 +474,7 @@ export default function ReportRecapView() {
                       <th className="py-2">Tanggal</th>
                       <th className="py-2 text-center">Total Resep</th>
                       <th className="py-2 text-center">Selesai</th>
-                      <th className="py-2 text-center">CITO</th>
+                      <th className="py-2 text-center">Menunggu</th>
                       <th className="py-2 text-right">Tingkat Layanan</th>
                     </tr>
                   </thead>
@@ -493,14 +492,8 @@ export default function ReportRecapView() {
                           <td className="py-2.5 text-center text-emerald-600 font-bold">
                             {t.completed}
                           </td>
-                          <td className="py-2.5 text-center">
-                            {t.cito > 0 ? (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-[#ec1415]">
-                                {t.cito} CITO
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">-</span>
-                            )}
+                          <td className="py-2.5 text-center text-amber-600 font-semibold">
+                            {t.pending || 0}
                           </td>
                           <td className="py-2.5 text-right font-bold text-slate-700">
                             {rate}%
@@ -550,19 +543,17 @@ export default function ReportRecapView() {
                   <th className="py-3 px-3">Dokter Pemeriksa</th>
                   <th className="py-3 px-3">Rincian Obat</th>
                   <th className="py-3 px-3 text-center">Status</th>
-                  <th className="py-3 px-3 text-center">Tipe</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {filteredPrescriptions.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
+                    <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
                       Tidak ada resep yang sesuai kriteria pencarian.
                     </td>
                   </tr>
                 ) : (
                   filteredPrescriptions.map((p) => {
-                    const isCito = p.is_cito === 1;
                     const isCompleted = p.status === 'completed';
                     const isPreparing = p.status === 'preparing';
 
@@ -598,17 +589,6 @@ export default function ReportRecapView() {
                           }`}>
                             {p.status === 'completed' ? 'Selesai' : p.status === 'preparing' ? 'Disiapkan' : 'Menunggu'}
                           </span>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          {isCito ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500 text-white animate-pulse">
-                              CITO
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 font-semibold">
-                              Reguler
-                            </span>
-                          )}
                         </td>
                       </tr>
                     );
