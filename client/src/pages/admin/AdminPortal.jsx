@@ -1,18 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
-  Boxes, 
-  Layers, 
-  Package, 
   Search, 
-  Filter, 
   Grid, 
   List, 
-  MapPin, 
-  AlertTriangle, 
-  Clock, 
-  CheckCircle2, 
   ChevronRight, 
-  Sparkles,
   RefreshCw,
   Printer,
   X
@@ -568,8 +559,7 @@ export default function AdminPortal({ activeSubTab }) {
           {/* Header Banner */}
           <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 sm:p-5 rounded-xl shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[11px] font-semibold tracking-wide">
-                <Layers className="w-3.5 h-3.5 text-indigo-400" />
+              <div className="inline-block px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[11px] font-semibold tracking-wide">
                 Instalasi Farmasi & Logistik Fisik
               </div>
               <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
@@ -593,60 +583,39 @@ export default function AdminPortal({ activeSubTab }) {
 
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center shrink-0">
-                <Boxes className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total Slot Rak</div>
-                <div className="text-xl font-extrabold text-slate-900 mt-0.5">{rackGroups.length} Rak</div>
-                <div className="text-[10px] text-slate-500">5 Zona Kompartemen</div>
-              </div>
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total Slot Rak</div>
+              <div className="text-xl font-extrabold text-slate-900 mt-0.5">{rackGroups.length} Rak</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">5 Zona Kompartemen</div>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shrink-0">
-                <Package className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total SKU Tersimpan</div>
-                <div className="text-xl font-extrabold text-slate-900 mt-0.5">{kpis ? kpis.totalMedicines : medicines.length} Obat</div>
-                <div className="text-[10px] text-emerald-600 font-medium">{kpis ? kpis.safeStock : '-'} stok aman</div>
-              </div>
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total SKU Tersimpan</div>
+              <div className="text-xl font-extrabold text-slate-900 mt-0.5">{kpis ? kpis.totalMedicines : medicines.length} Obat</div>
+              <div className="text-[10px] text-emerald-600 font-medium mt-0.5">{kpis ? kpis.safeStock : '-'} stok aman</div>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5" />
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Rak Butuh Restock</div>
+              <div className="text-xl font-extrabold text-amber-700 mt-0.5">
+                {rackGroups.filter(r => r.hasLowStock).length} Rak
               </div>
-              <div>
-                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Rak Butuh Restock</div>
-                <div className="text-xl font-extrabold text-amber-700 mt-0.5">
-                  {rackGroups.filter(r => r.hasLowStock).length} Rak
-                </div>
-                <div className="text-[10px] text-amber-600 font-medium">Stok di bawah batas min.</div>
-              </div>
+              <div className="text-[10px] text-amber-600 font-medium mt-0.5">Stok di bawah batas min.</div>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5" />
+            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Batch ED &lt; 60 Hari</div>
+              <div className="text-xl font-extrabold text-rose-700 mt-0.5">
+                {rackGroups.reduce((acc, r) => acc + (r.expiringCount || 0), 0)} Batch
               </div>
-              <div>
-                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Batch ED &lt; 60 Hari</div>
-                <div className="text-xl font-extrabold text-rose-700 mt-0.5">
-                  {rackGroups.reduce((acc, r) => acc + (r.expiringCount || 0), 0)} Batch
-                </div>
-                <div className="text-[10px] text-rose-600 font-medium">Perlu rotasi FEFO segera</div>
-              </div>
+              <div className="text-[10px] text-rose-600 font-medium mt-0.5">Perlu rotasi FEFO segera</div>
             </div>
           </div>
 
           {/* Zona Selector Pills */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="text-xs font-bold text-slate-700">
                 Filter Berdasarkan Zona Kompartemen Fisik:
               </span>
               <span className="text-[11px] text-slate-500">
@@ -705,17 +674,16 @@ export default function AdminPortal({ activeSubTab }) {
               </div>
 
               {/* Status Filter */}
-              <div className="flex items-center gap-1.5 text-xs">
-                <Filter className="w-3.5 h-3.5 text-slate-400" />
+              <div className="text-xs">
                 <select
                   value={rackFilterStatus}
                   onChange={(e) => setRackFilterStatus(e.target.value)}
                   className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 text-xs font-medium focus:outline-none focus:border-indigo-500 cursor-pointer"
                 >
                   <option value="all">Semua Status Persediaan</option>
-                  <option value="safe">🟢 Stok Aman</option>
-                  <option value="low">⚠️ Butuh Restock (Menipis/Kritis)</option>
-                  <option value="expiring">⏰ Ada Batch ED &lt; 60 Hari</option>
+                  <option value="safe">Stok Aman</option>
+                  <option value="low">Perlu Restock (Menipis/Kritis)</option>
+                  <option value="expiring">Ada Batch ED &lt; 60 Hari</option>
                 </select>
               </div>
             </div>
@@ -799,19 +767,19 @@ export default function AdminPortal({ activeSubTab }) {
                         {/* Status Badges */}
                         <div className="flex flex-col items-end gap-1">
                           {rack.hasExpiringBatch && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-rose-500" />
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
                               {rack.expiringCount} ED Dekat
                             </span>
                           )}
                           {rack.hasLowStock ? (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3 text-amber-500" />
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
                               Perlu Restock
                             </span>
                           ) : (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
                               Stok Aman
                             </span>
                           )}
@@ -921,8 +889,7 @@ export default function AdminPortal({ activeSubTab }) {
                           onClick={() => setSelectedRackDetail(rack)}
                           className="px-2.5 py-1 text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition flex items-center gap-1 cursor-pointer"
                         >
-                          <Printer className="w-3.5 h-3.5" />
-                          Label & Detail Rak
+                          Detail Kompartemen
                           <ChevronRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -1387,10 +1354,7 @@ export default function AdminPortal({ activeSubTab }) {
               {/* Printable Shelf Label Card Preview */}
               <div className="p-4 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/30 space-y-3">
                 <div className="flex items-center justify-between text-[11px] text-indigo-900 font-bold uppercase tracking-wider">
-                  <span className="flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                    Preview Label Penanda Rak Fisik Farmasi
-                  </span>
+                  <span>Preview Label Penanda Rak Fisik Farmasi</span>
                   <span className="text-indigo-600 font-semibold">Standar Akreditasi Farmasi</span>
                 </div>
 
