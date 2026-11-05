@@ -1,5 +1,7 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
+const fs = require('fs');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
@@ -50,6 +52,18 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api', apiRoutes);
+
+// Serve static client build if present (Unified Production Mode)
+const distPath = path.join(__dirname, '../../client/dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+      return next();
+    }
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 // Global Centralized JSON Error Handler
 app.use((err, req, res, next) => {

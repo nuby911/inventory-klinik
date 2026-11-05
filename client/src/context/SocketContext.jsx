@@ -17,8 +17,12 @@ export function SocketProvider({ children }) {
       return;
     }
 
-    // Connect directly to backend port 5000
-    const socketUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
+    // Connect to backend port 5000 in local dev, or current origin in production
+    const socketUrl = import.meta.env.VITE_WS_URL || (
+      window.location.port === '5173' || window.location.port === '3000'
+        ? `${window.location.protocol}//${window.location.hostname}:5000`
+        : window.location.origin
+    );
 
     const socketInstance = io(socketUrl, {
       transports: ['websocket', 'polling'],
