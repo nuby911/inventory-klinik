@@ -13,6 +13,7 @@ import {
   CheckCircle2, 
   ChevronRight, 
   Sparkles,
+  RefreshCw,
   Printer,
   X
 } from 'lucide-react';
@@ -584,7 +585,7 @@ export default function AdminPortal({ activeSubTab }) {
                 className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium cursor-pointer transition flex items-center gap-1.5"
                 title="Sinkronisasi data rak"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                 Refresh Data
               </button>
             </div>
