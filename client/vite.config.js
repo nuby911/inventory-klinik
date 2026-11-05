@@ -15,8 +15,6 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('html5-qrcode')) return 'vendor-scanner';
-            if (id.includes('bwip-js')) return 'vendor-barcode';
             if (id.includes('lucide-react')) return 'vendor-icons';
             if (id.includes('socket.io-client')) return 'vendor-socket';
             if (id.includes('react') || id.includes('react-dom')) return 'vendor-react';

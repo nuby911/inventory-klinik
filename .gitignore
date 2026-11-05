@@ -46,6 +46,7 @@ Thumbs.db
 
 # Agent files & local artifacts
 .agents/
+*audit_report*.md
 
 # Video explainer
 video-explainer/

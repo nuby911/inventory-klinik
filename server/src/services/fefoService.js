@@ -78,7 +78,7 @@ function previewFEFOAllocation(medicineId, requiredBaseQty, simulatedBatchStock 
     SELECT id, batch_number, expired_date, stock_qty, rack_location, distributor
     FROM medicine_batches
     WHERE medicine_id = ? AND stock_qty > 0 AND date(expired_date) >= date('now')
-    ORDER BY id ASC
+    ORDER BY date(expired_date) ASC, id ASC
   `).all(medicineId);
 
   let remainingNeeded = requiredBaseQty;

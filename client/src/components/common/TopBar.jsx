@@ -32,7 +32,7 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
     ],
     admin: [
       { id: 'dashboard', label: 'Dashboard Operasional', desc: 'Ringkasan inventori dan stok' },
-      { id: 'inventory_master', label: 'Master Obat & Satuan', desc: 'Katalog obat, multi-satuan & barcode' },
+      { id: 'inventory_master', label: 'Master Obat & Satuan', desc: 'Katalog obat & multi-satuan' },
       { id: 'restock_batches', label: 'Penerimaan Batch (Restock)', desc: 'Penerimaan stok batch obat masuk' },
       { id: 'logistics_overview', label: 'Tata Letak Rak', desc: 'Posisi rak penyimpanan fisik' },
       { id: 'reports', label: 'Laporan Rekapitulasi', desc: 'Rekapitulasi logistik dan peresepan' }

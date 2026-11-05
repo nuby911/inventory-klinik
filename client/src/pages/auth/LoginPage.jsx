@@ -102,7 +102,7 @@ export default function LoginPage() {
             Praktek Dokter & Rumah Sunat Modern
           </span>
           <span className="text-[11px] font-medium tracking-widest uppercase text-white/60 mt-0.5">
-            SIM Farmasi & Rawat Jalan Terpadu
+            SIM Farmasi
           </span>
         </div>
       </div>

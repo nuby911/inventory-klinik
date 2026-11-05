@@ -131,5 +131,17 @@ describe('fefoService (Unit Tests)', () => {
       const b1 = db.prepare('SELECT stock_qty FROM medicine_batches WHERE id = 1').get();
       assert.strictEqual(b1.stock_qty, 30, 'Batch 1 stock must remain unchanged');
     });
+
+    it('should prioritize earlier expiration date even when created later with a higher id', () => {
+      // Insert a batch with higher ID (id=10) but earlier expiry than batch 1 ('2026-12-01' vs '2027-01-15')
+      db.prepare(`
+        INSERT INTO medicine_batches (id, medicine_id, batch_number, expired_date, stock_qty, rack_location, distributor)
+        VALUES (10, 1, 'BATCH-EARLY-001', '2026-12-01', 10, 'Rak A-01', 'Test Dist')
+      `).run();
+
+      const preview = previewFEFOAllocation(1, 5);
+      assert.strictEqual(preview.allocation[0].batchNumber, 'BATCH-EARLY-001');
+      assert.strictEqual(preview.allocation[0].takeQty, 5);
+    });
   });
 });
