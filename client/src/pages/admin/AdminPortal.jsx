@@ -71,20 +71,20 @@ const ZONE_THEMES = {
 };
 
 function getExpiryStatus(dateStr) {
-  if (!dateStr) return { label: 'Tanpa ED', color: 'bg-slate-100 text-slate-600 border-slate-200', isCritical: false, days: 999 };
+  if (!dateStr) return { label: 'Tanpa ED', shortLabel: 'No ED', color: 'bg-slate-100 text-slate-600 border-slate-200', isCritical: false, days: 999 };
   const exp = new Date(dateStr);
   const now = new Date();
   const diffTime = exp.getTime() - now.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   
   if (diffDays <= 0) {
-    return { label: 'Kedaluwarsa (Expired)', color: 'bg-rose-100 text-rose-800 border-rose-300 font-bold', isCritical: true, days: diffDays };
+    return { label: 'Kedaluwarsa (Expired)', shortLabel: 'Expired', color: 'bg-rose-100 text-rose-800 border-rose-300 font-bold', isCritical: true, days: diffDays };
   } else if (diffDays <= 60) {
-    return { label: `ED ${diffDays} hari`, color: 'bg-amber-100 text-amber-800 border-amber-300 font-semibold', isCritical: true, days: diffDays };
+    return { label: `ED ${diffDays} hari`, shortLabel: `ED ${diffDays}h`, color: 'bg-amber-100 text-amber-800 border-amber-300 font-semibold', isCritical: true, days: diffDays };
   } else if (diffDays <= 180) {
-    return { label: `ED ${Math.round(diffDays / 30)} bln`, color: 'bg-blue-50 text-blue-700 border-blue-200', isCritical: false, days: diffDays };
+    return { label: `ED ${Math.round(diffDays / 30)} bln`, shortLabel: `ED ${Math.round(diffDays / 30)}b`, color: 'bg-blue-50 text-blue-700 border-blue-200', isCritical: false, days: diffDays };
   } else {
-    return { label: `ED: ${dateStr}`, color: 'bg-slate-50 text-slate-700 border-slate-200', isCritical: false, days: diffDays };
+    return { label: `ED: ${dateStr}`, shortLabel: dateStr, color: 'bg-slate-50 text-slate-700 border-slate-200', isCritical: false, days: diffDays };
   }
 }
 
@@ -364,7 +364,7 @@ export default function AdminPortal({ activeSubTab }) {
   }, [rackGroups]);
 
   return (
-    <div className="p-3 sm:p-6 space-y-4 max-w-7xl mx-auto font-sans">
+    <div className="p-1 sm:p-4 lg:p-6 space-y-4 max-w-7xl mx-auto font-sans">
       {/* Feedback Alerts */}
       {actionSuccess && (
         <div className="p-3 bg-emerald-50 border border-emerald-300 rounded text-xs font-medium text-emerald-900 flex items-center justify-between">
@@ -388,22 +388,22 @@ export default function AdminPortal({ activeSubTab }) {
 
       {/* SubTab 1: Master Obat & Multi-Satuan */}
       {activeSubTab === 'inventory_master' && (
-        <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3">
+        <div className="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-4 space-y-3 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
               <input
                 type="text"
                 placeholder="Cari obat, kode, rak..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-56 px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-800 focus:outline-none focus:border-slate-500"
+                className="w-full sm:w-56 px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:border-slate-500"
               />
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 overflow-x-auto pb-1 max-w-full scrollbar-none">
                 {['Semua', 'padat', 'cair', 'salep'].map(c => (
                   <button
                     key={c}
                     onClick={() => setSelectedCategory(c)}
-                    className={`px-2 py-1 rounded text-xs font-medium cursor-pointer transition ${
+                    className={`px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer transition whitespace-nowrap ${
                       selectedCategory === c ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                     }`}
                   >
@@ -413,18 +413,18 @@ export default function AdminPortal({ activeSubTab }) {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={loadAllData}
-                className="px-2.5 py-1.5 text-slate-600 hover:text-slate-900 bg-slate-100 rounded text-xs font-medium cursor-pointer"
+                className="flex-1 sm:flex-initial px-3 py-1.5 text-slate-600 hover:text-slate-900 bg-slate-100 rounded-lg text-xs font-medium cursor-pointer text-center"
               >
                 Muat Ulang
               </button>
               <button
                 onClick={() => setAddMedModalOpen(true)}
-                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded cursor-pointer"
+                className="flex-1 sm:flex-initial px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg cursor-pointer text-center whitespace-nowrap shadow-xs"
               >
-                + Tambah Master Obat
+                + Tambah Obat
               </button>
             </div>
           </div>
@@ -500,25 +500,25 @@ export default function AdminPortal({ activeSubTab }) {
       {/* SubTab 2: Penerimaan Batch (Restock) */}
       {activeSubTab === 'restock_batches' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+          <div className="bg-white rounded-xl border border-slate-200 p-3.5 sm:p-4 space-y-3 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
                 <div className="font-bold text-xs uppercase tracking-wide text-slate-800">
                   Daftar Batch Obat Fisik di Rak
                 </div>
-                <div className="text-[11px] text-slate-500">Pelacakan nomor batch, tanggal kadaluarsa, dan lokasi rak fisik</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">Pelacakan nomor batch, tanggal kadaluarsa, dan lokasi rak fisik</div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => openRestock()}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold cursor-pointer shadow-xs transition"
+                  className="flex-1 sm:flex-initial px-3.5 py-1.5 bg-[#155ea3] hover:bg-[#0f3d6b] text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs transition text-center whitespace-nowrap"
                 >
-                  + Tambah Penerimaan Batch
+                  + Tambah Batch Masuk
                 </button>
                 <button
                   onClick={loadAllData}
-                  className="px-2.5 py-1.5 text-slate-600 hover:text-slate-900 bg-slate-100 rounded text-xs font-medium cursor-pointer"
+                  className="px-3 py-1.5 text-slate-600 hover:text-slate-900 bg-slate-100 rounded-lg text-xs font-medium cursor-pointer"
                 >
                   Muat Ulang
                 </button>
@@ -557,7 +557,7 @@ export default function AdminPortal({ activeSubTab }) {
       {activeSubTab === 'logistics_overview' && (
         <div className="space-y-4">
           {/* Header Banner */}
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 sm:p-5 rounded-xl shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-3.5 sm:p-5 rounded-xl shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3.5">
             <div className="space-y-1">
               <div className="inline-block px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[11px] font-semibold tracking-wide">
                 Instalasi Farmasi & Logistik Fisik
@@ -569,52 +569,52 @@ export default function AdminPortal({ activeSubTab }) {
                 Visualisasi kompartemen rak fisik farmasi real-time. Memantau kapasitas rak, seluruh batch tersimpan, tanggal kedaluwarsa, dan status persediaan obat.
               </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
               <button
                 onClick={loadAllData}
-                className="px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium cursor-pointer transition flex items-center gap-1.5"
+                className="w-full md:w-auto px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium cursor-pointer transition flex items-center justify-center gap-1.5"
                 title="Sinkronisasi data rak"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                Refresh Data
+                <span>Refresh Data</span>
               </button>
             </div>
           </div>
 
           {/* KPI Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total Slot Rak</div>
-              <div className="text-xl font-extrabold text-slate-900 mt-0.5">{rackGroups.length} Rak</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">5 Zona Kompartemen</div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-xs">
+            <div className="bg-white p-2.5 sm:p-3.5 rounded-xl border border-slate-200 shadow-xs min-w-0">
+              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">Total Slot Rak</div>
+              <div className="text-lg sm:text-xl font-extrabold text-slate-900 mt-0.5">{rackGroups.length} Rak</div>
+              <div className="text-[10px] text-slate-500 mt-0.5 truncate">5 Zona Kompartemen</div>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Total SKU Tersimpan</div>
-              <div className="text-xl font-extrabold text-slate-900 mt-0.5">{kpis ? kpis.totalMedicines : medicines.length} Obat</div>
-              <div className="text-[10px] text-emerald-600 font-medium mt-0.5">{kpis ? kpis.safeStock : '-'} stok aman</div>
+            <div className="bg-white p-2.5 sm:p-3.5 rounded-xl border border-slate-200 shadow-xs min-w-0">
+              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">Total SKU Tersimpan</div>
+              <div className="text-lg sm:text-xl font-extrabold text-slate-900 mt-0.5 truncate">{kpis ? kpis.totalMedicines : medicines.length} Obat</div>
+              <div className="text-[10px] text-emerald-600 font-medium mt-0.5 truncate">{kpis ? kpis.safeStock : '-'} stok aman</div>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Rak Butuh Restock</div>
-              <div className="text-xl font-extrabold text-amber-700 mt-0.5">
+            <div className="bg-white p-2.5 sm:p-3.5 rounded-xl border border-slate-200 shadow-xs min-w-0">
+              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">Rak Butuh Restock</div>
+              <div className="text-lg sm:text-xl font-extrabold text-amber-700 mt-0.5">
                 {rackGroups.filter(r => r.hasLowStock).length} Rak
               </div>
-              <div className="text-[10px] text-amber-600 font-medium mt-0.5">Stok di bawah batas min.</div>
+              <div className="text-[10px] text-amber-600 font-medium mt-0.5 truncate">Stok &lt; batas minimum</div>
             </div>
 
-            <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Batch ED &lt; 60 Hari</div>
-              <div className="text-xl font-extrabold text-rose-700 mt-0.5">
+            <div className="bg-white p-2.5 sm:p-3.5 rounded-xl border border-slate-200 shadow-xs min-w-0">
+              <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">Batch ED &lt; 60 Hari</div>
+              <div className="text-lg sm:text-xl font-extrabold text-rose-700 mt-0.5">
                 {rackGroups.reduce((acc, r) => acc + (r.expiringCount || 0), 0)} Batch
               </div>
-              <div className="text-[10px] text-rose-600 font-medium mt-0.5">Perlu rotasi FEFO segera</div>
+              <div className="text-[10px] text-rose-600 font-medium mt-0.5 truncate">Perlu rotasi FEFO</div>
             </div>
           </div>
 
           {/* Zona Selector Pills */}
-          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs space-y-2.5">
-            <div className="flex items-center justify-between">
+          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-xs space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <span className="text-xs font-bold text-slate-700">
                 Filter Berdasarkan Zona Kompartemen Fisik:
               </span>
@@ -623,7 +623,7 @@ export default function AdminPortal({ activeSubTab }) {
               </span>
             </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
               {ZONES_CONFIG.map(zone => {
                 const isSelected = selectedZone === zone.id;
                 const count = zoneCounts[zone.id] || 0;
@@ -631,7 +631,7 @@ export default function AdminPortal({ activeSubTab }) {
                   <button
                     key={zone.id}
                     onClick={() => setSelectedZone(zone.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition flex items-center gap-2 border ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap cursor-pointer transition flex items-center gap-2 border shrink-0 ${
                       isSelected 
                         ? 'bg-slate-900 text-white border-slate-900 shadow-xs' 
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:text-slate-900'
@@ -651,17 +651,17 @@ export default function AdminPortal({ activeSubTab }) {
           </div>
 
           {/* Search, Status Filter & View Mode Controls */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex flex-wrap items-center gap-2 flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white p-2.5 sm:p-3 rounded-xl border border-slate-200 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1 w-full sm:w-auto">
               {/* Search Bar */}
-              <div className="relative flex-1 min-w-[200px] max-w-md">
+              <div className="relative w-full sm:flex-1 sm:max-w-md">
                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Cari kode rak (misal: Rak A-01), nama obat, batch..."
+                  placeholder="Cari kode rak, nama obat, batch..."
                   value={rackSearch}
                   onChange={(e) => setRackSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white transition"
+                  className="w-full pl-8 pr-7 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white transition"
                 />
                 {rackSearch && (
                   <button 
@@ -674,25 +674,25 @@ export default function AdminPortal({ activeSubTab }) {
               </div>
 
               {/* Status Filter */}
-              <div className="text-xs">
+              <div className="text-xs w-full sm:w-auto">
                 <select
                   value={rackFilterStatus}
                   onChange={(e) => setRackFilterStatus(e.target.value)}
-                  className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 text-xs font-medium focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  className="w-full sm:w-auto px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 text-xs font-medium focus:outline-none focus:border-indigo-500 cursor-pointer"
                 >
                   <option value="all">Semua Status Persediaan</option>
                   <option value="safe">Stok Aman</option>
-                  <option value="low">Perlu Restock (Menipis/Kritis)</option>
+                  <option value="low">Perlu Restock</option>
                   <option value="expiring">Ada Batch ED &lt; 60 Hari</option>
                 </select>
               </div>
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 shrink-0">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 w-full sm:w-auto shrink-0">
               <button
                 onClick={() => setRackViewMode('grid')}
-                className={`px-2.5 py-1 rounded text-xs font-semibold cursor-pointer transition flex items-center gap-1.5 ${
+                className={`flex-1 sm:flex-initial justify-center px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition flex items-center gap-1.5 ${
                   rackViewMode === 'grid' 
                     ? 'bg-white text-indigo-700 shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900'
@@ -700,11 +700,11 @@ export default function AdminPortal({ activeSubTab }) {
                 title="Tampilan Visual Rak Kompartemen"
               >
                 <Grid className="w-3.5 h-3.5" />
-                Visual Rak
+                <span>Visual Rak</span>
               </button>
               <button
                 onClick={() => setRackViewMode('table')}
-                className={`px-2.5 py-1 rounded text-xs font-semibold cursor-pointer transition flex items-center gap-1.5 ${
+                className={`flex-1 sm:flex-initial justify-center px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition flex items-center gap-1.5 ${
                   rackViewMode === 'table' 
                     ? 'bg-white text-indigo-700 shadow-xs' 
                     : 'text-slate-600 hover:text-slate-900'
@@ -712,7 +712,7 @@ export default function AdminPortal({ activeSubTab }) {
                 title="Tampilan Tabel Inventori"
               >
                 <List className="w-3.5 h-3.5" />
-                Tabel Data
+                <span>Tabel Data</span>
               </button>
             </div>
           </div>
@@ -736,7 +736,7 @@ export default function AdminPortal({ activeSubTab }) {
             </div>
           ) : rackViewMode === 'grid' ? (
             /* Visual Grid Mode */
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
               {filteredRacks.map(rack => {
                 const zoneInfo = getZoneInfo(rack.zone);
                 const theme = ZONE_THEMES[rack.zone] || ZONE_THEMES.OTHER;
@@ -750,52 +750,54 @@ export default function AdminPortal({ activeSubTab }) {
                     <div className={`h-1.5 w-full ${theme.accentBar}`} />
 
                     {/* Card Header */}
-                    <div className="p-3.5 pb-2.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
+                    <div className="p-3 sm:p-3.5 pb-2 sm:pb-2.5">
+                      <div className="flex items-start justify-between gap-2 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
                           <div className={`w-8 h-8 rounded-lg ${theme.bgLight} border ${theme.badge} flex items-center justify-center font-black text-sm shrink-0`}>
                             {rack.zone}
                           </div>
-                          <div>
-                            <h3 className="font-extrabold text-sm text-slate-900 tracking-tight flex items-center gap-1.5">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-extrabold text-sm text-slate-900 tracking-tight truncate block">
                               {rack.rackName}
                             </h3>
-                            <span className="text-[11px] font-medium text-slate-500">{zoneInfo.label}</span>
+                            <span className="text-[11px] font-medium text-slate-500 truncate block">
+                              {zoneInfo.label}
+                            </span>
                           </div>
                         </div>
 
                         {/* Status Badges */}
-                        <div className="flex flex-col items-end gap-1">
+                        <div className="flex flex-col items-end gap-1 shrink-0">
                           {rack.hasExpiringBatch && (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1.5 whitespace-nowrap">
                               <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
-                              {rack.expiringCount} ED Dekat
+                              <span>{rack.expiringCount} ED Dekat</span>
                             </span>
                           )}
                           {rack.hasLowStock ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5 whitespace-nowrap">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                              Perlu Restock
+                              <span>Perlu Restock</span>
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5 whitespace-nowrap">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                              Stok Aman
+                              <span>Stok Aman</span>
                             </span>
                           )}
                         </div>
                       </div>
 
                       {/* Shelf Statistics Pill */}
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100 mt-2.5">
-                        <span><strong className="text-slate-800">{rack.meds.length}</strong> SKU Obat Tersimpan</span>
-                        <span>Total: <strong className="text-slate-800">{rack.totalStock.toLocaleString()}</strong> Unit</span>
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100 mt-2">
+                        <span className="truncate mr-2"><strong className="text-slate-800">{rack.meds.length}</strong> SKU Obat</span>
+                        <span className="shrink-0 font-medium">Total: <strong className="text-slate-800">{rack.totalStock.toLocaleString()}</strong> Unit</span>
                       </div>
                     </div>
 
                     {/* Shelf Compartment Contents (All Medicines & Batches) */}
-                    <div className="px-3.5 pb-3 flex-1 flex flex-col justify-between">
-                      <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
+                    <div className="px-3 sm:px-3.5 pb-3 flex-1 flex flex-col justify-between">
+                      <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
                         {rack.meds.length === 0 ? (
                           <div className="text-center py-6 text-slate-400 text-xs italic bg-slate-50 rounded-lg border border-dashed border-slate-200">
                             Kompartemen rak ini belum dialokasikan obat.
@@ -807,11 +809,11 @@ export default function AdminPortal({ activeSubTab }) {
                             return (
                               <div
                                 key={med.id}
-                                className="p-2.5 bg-slate-50/70 hover:bg-slate-100/80 rounded-lg border border-slate-200 transition space-y-2"
+                                className="p-2 sm:p-2.5 bg-slate-50/70 hover:bg-slate-100/80 rounded-lg border border-slate-200 transition space-y-1.5"
                               >
                                 {/* Medicine Info Row */}
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0">
+                                <div className="flex items-start justify-between gap-2 min-w-0">
+                                  <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-semibold">
                                         {med.code}
@@ -820,13 +822,13 @@ export default function AdminPortal({ activeSubTab }) {
                                         {med.category}
                                       </span>
                                     </div>
-                                    <h4 className="font-bold text-xs text-slate-900 mt-1 leading-snug">
+                                    <h4 className="font-bold text-xs text-slate-900 mt-0.5 leading-snug break-words">
                                       {med.name}
                                     </h4>
                                   </div>
                                   <button
                                     onClick={() => openRestock(med)}
-                                    className="px-2 py-1 bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 rounded text-[11px] font-semibold cursor-pointer shrink-0 transition flex items-center gap-1 shadow-2xs"
+                                    className="px-2 py-1 bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 rounded text-[11px] font-semibold cursor-pointer shrink-0 transition flex items-center gap-1 shadow-2xs whitespace-nowrap active:scale-95"
                                     title={`Restock batch untuk ${med.name}`}
                                   >
                                     + Restock
@@ -834,13 +836,13 @@ export default function AdminPortal({ activeSubTab }) {
                                 </div>
 
                                 {/* Stock Quantity & Status */}
-                                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60">
-                                  <div>
-                                    <span className="font-bold text-slate-800">
+                                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/60 gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <span className="font-bold text-slate-800 text-[11px] sm:text-xs truncate block">
                                       {med.breakdownText || `${med.total_stock} ${med.base_unit}`}
                                     </span>
                                   </div>
-                                  <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                                  <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold shrink-0 whitespace-nowrap ${
                                     med.stockStatus === 'Aman' ? 'text-emerald-700 bg-emerald-100/60' :
                                     med.stockStatus === 'Menipis' ? 'text-amber-700 bg-amber-100/60' : 'text-rose-700 bg-rose-100/60'
                                   }`}>
@@ -853,7 +855,7 @@ export default function AdminPortal({ activeSubTab }) {
                                   <div className="space-y-1 pt-1.5 border-t border-slate-200/50">
                                     <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
                                       <span>Batch Aktif ({medBatches.length})</span>
-                                      <span className="font-normal text-slate-400">Urutan FEFO</span>
+                                      <span className="font-normal text-slate-400 text-[9px]">FEFO</span>
                                     </div>
                                     <div className="space-y-1">
                                       {medBatches.map(b => {
@@ -861,14 +863,15 @@ export default function AdminPortal({ activeSubTab }) {
                                         return (
                                           <div
                                             key={b.id}
-                                            className="flex items-center justify-between text-[11px] bg-white px-2 py-1 rounded border border-slate-200/80 shadow-2xs"
+                                            className="flex items-center justify-between text-[11px] bg-white px-2 py-1 rounded border border-slate-200/80 shadow-2xs gap-1.5 min-w-0"
                                           >
-                                            <div className="flex items-center gap-1.5 truncate">
-                                              <span className="font-mono text-slate-700 font-semibold">#{b.batch_number}</span>
-                                              <span className="text-slate-500 font-medium">({b.stock_qty} {med.base_unit})</span>
+                                            <div className="flex items-center gap-1 min-w-0 flex-1 truncate">
+                                              <span className="font-mono text-slate-700 font-semibold text-[10px] sm:text-[11px] truncate">#{b.batch_number}</span>
+                                              <span className="text-slate-500 font-medium text-[10px] shrink-0">({b.stock_qty} {med.base_unit})</span>
                                             </div>
-                                            <span className={`px-1.5 py-0.2 rounded border text-[10px] shrink-0 ${expInfo.color}`}>
-                                              {expInfo.label}
+                                            <span className={`px-1.5 py-0.2 rounded border text-[9px] sm:text-[10px] shrink-0 whitespace-nowrap font-medium ${expInfo.color}`}>
+                                              <span className="hidden sm:inline">{expInfo.label}</span>
+                                              <span className="sm:hidden">{expInfo.shortLabel}</span>
                                             </span>
                                           </div>
                                         );
@@ -883,13 +886,13 @@ export default function AdminPortal({ activeSubTab }) {
                       </div>
 
                       {/* Card Footer: Detail & Label Rack */}
-                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-[11px] text-slate-400">Kompartemen Farmasi</span>
+                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-slate-400 truncate">Kompartemen Farmasi</span>
                         <button
                           onClick={() => setSelectedRackDetail(rack)}
-                          className="px-2.5 py-1 text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1 text-xs font-semibold text-slate-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition flex items-center gap-1 cursor-pointer shrink-0"
                         >
-                          Detail Kompartemen
+                          <span>Detail</span>
                           <ChevronRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -1309,27 +1312,27 @@ export default function AdminPortal({ activeSubTab }) {
             <div className={`h-2 w-full ${ZONE_THEMES[selectedRackDetail.zone]?.accentBar || 'bg-slate-700'}`} />
 
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between gap-3 bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl ${ZONE_THEMES[selectedRackDetail.zone]?.bgLight || 'bg-slate-100'} border ${ZONE_THEMES[selectedRackDetail.zone]?.badge || 'border-slate-200'} flex items-center justify-center font-black text-base text-slate-800`}>
+            <div className="p-3.5 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${ZONE_THEMES[selectedRackDetail.zone]?.bgLight || 'bg-slate-100'} border ${ZONE_THEMES[selectedRackDetail.zone]?.badge || 'border-slate-200'} flex items-center justify-center font-black text-base text-slate-800 shrink-0`}>
                   {selectedRackDetail.zone}
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight truncate">
                       Kompartemen {selectedRackDetail.rackName}
                     </h3>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${ZONE_THEMES[selectedRackDetail.zone]?.badge || 'bg-slate-100'}`}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border shrink-0 ${ZONE_THEMES[selectedRackDetail.zone]?.badge || 'bg-slate-100'}`}>
                       {getZoneInfo(selectedRackDetail.zone).name}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5 truncate">
                     {getZoneInfo(selectedRackDetail.zone).desc} • {getZoneInfo(selectedRackDetail.zone).label}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => window.print()}
@@ -1337,7 +1340,7 @@ export default function AdminPortal({ activeSubTab }) {
                   title="Cetak label kompartemen fisik rak ini"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  Cetak Label Rak
+                  <span>Cetak Label Rak</span>
                 </button>
                 <button
                   type="button"
@@ -1350,18 +1353,18 @@ export default function AdminPortal({ activeSubTab }) {
             </div>
 
             {/* Modal Body */}
-            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs text-slate-700">
+            <div className="p-3.5 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 text-xs text-slate-700">
               {/* Printable Shelf Label Card Preview */}
-              <div className="p-4 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/30 space-y-3">
-                <div className="flex items-center justify-between text-[11px] text-indigo-900 font-bold uppercase tracking-wider">
+              <div className="p-3.5 sm:p-4 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/30 space-y-2.5 sm:space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-indigo-900 font-bold uppercase tracking-wider">
                   <span>Preview Label Penanda Rak Fisik Farmasi</span>
-                  <span className="text-indigo-600 font-semibold">Standar Akreditasi Farmasi</span>
+                  <span className="text-indigo-600 font-semibold text-[10px]">Standar Akreditasi Farmasi</span>
                 </div>
 
-                <div className="bg-white p-4 rounded-lg border border-indigo-100 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="bg-white p-3.5 sm:p-4 rounded-lg border border-indigo-100 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                   <div className="space-y-1">
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Klinik Almedika • Depo Farmasi</div>
-                    <div className="text-2xl font-black text-slate-900 tracking-tight font-mono">
+                    <div className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-mono">
                       {selectedRackDetail.rackName}
                     </div>
                     <div className="text-xs font-semibold text-indigo-800">
@@ -1382,18 +1385,18 @@ export default function AdminPortal({ activeSubTab }) {
               </div>
 
               {/* Shelf Summary Stats */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <div className="text-[10px] font-semibold text-slate-500 uppercase">Total SKU Obat</div>
-                  <div className="text-lg font-extrabold text-slate-900 mt-0.5">{selectedRackDetail.meds.length} Obat</div>
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                <div className="p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-200 min-w-0 text-center sm:text-left">
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase truncate">Total SKU</div>
+                  <div className="text-base sm:text-lg font-extrabold text-slate-900 mt-0.5">{selectedRackDetail.meds.length} Obat</div>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <div className="text-[10px] font-semibold text-slate-500 uppercase">Total Kuantitas Fisik</div>
-                  <div className="text-lg font-extrabold text-slate-900 mt-0.5">{selectedRackDetail.totalStock.toLocaleString()} Unit</div>
+                <div className="p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-200 min-w-0 text-center sm:text-left">
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase truncate">Total Stok</div>
+                  <div className="text-base sm:text-lg font-extrabold text-slate-900 mt-0.5">{selectedRackDetail.totalStock.toLocaleString()} Unit</div>
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <div className="text-[10px] font-semibold text-slate-500 uppercase">Batch ED &lt; 60 Hari</div>
-                  <div className={`text-lg font-extrabold mt-0.5 ${selectedRackDetail.expiringCount > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                <div className="p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-200 min-w-0 text-center sm:text-left">
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase truncate">ED &lt; 60 Hari</div>
+                  <div className={`text-base sm:text-lg font-extrabold mt-0.5 ${selectedRackDetail.expiringCount > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
                     {selectedRackDetail.expiringCount} Batch
                   </div>
                 </div>
@@ -1411,7 +1414,7 @@ export default function AdminPortal({ activeSubTab }) {
                     Belum ada obat yang ditempatkan pada rak ini.
                   </div>
                 ) : (
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <div className="border border-slate-200 rounded-xl overflow-x-auto">
                     <table className="w-full text-left text-xs text-slate-600">
                       <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px] tracking-wider">
                         <tr>

@@ -183,9 +183,9 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
       </div>
 
       {/* 4 Kartu Metrik Utama (Flat, High Contrast, Elegan) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Metrik 1: Antrean Menunggu */}
-        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="bg-white p-3.5 sm:p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Resep Menunggu</span>
             <Clock className="w-4 h-4 text-[#155ea3]" />
@@ -200,7 +200,7 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
         </div>
 
         {/* Metrik 2: Sedang Diracik */}
-        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="bg-white p-3.5 sm:p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">
               Sedang Diracik
@@ -213,13 +213,13 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
             </span>
             <span className="text-xs text-slate-500">resep</span>
           </div>
-          <div className="mt-2 text-[11px] text-slate-500">
+          <div className="mt-2 text-[11px] text-slate-500 truncate">
             Sedang dalam penyiapan farmasi
           </div>
         </div>
 
         {/* Metrik 3: Selesai Hari Ini */}
-        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="bg-white p-3.5 sm:p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Selesai Diserahkan</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -228,13 +228,13 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
             <span className="text-2xl font-bold text-slate-900">{metrics.completed}</span>
             <span className="text-xs text-slate-500">resep</span>
           </div>
-          <div className="mt-2 text-[11px] text-slate-500">
+          <div className="mt-2 text-[11px] text-slate-500 truncate">
             Resep selesai dilayani
           </div>
         </div>
 
         {/* Metrik 4: Peringatan Stok & ED */}
-        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
+        <div className="bg-white p-3.5 sm:p-4.5 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500">Stok Kritis / Dekat ED</span>
             <Pill className="w-4 h-4 text-[#155ea3]" />
@@ -247,8 +247,8 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
             </span>
             <span className="text-xs text-slate-500">stok kritis</span>
           </div>
-          <div className="mt-2 text-[11px] text-slate-500">
-            {expiringBatches.length} batch mendekati kadaluwarsa
+          <div className="mt-2 text-[11px] text-slate-500 truncate">
+            {expiringBatches.length} batch mendekati ED
           </div>
         </div>
       </div>
