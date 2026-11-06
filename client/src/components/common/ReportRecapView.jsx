@@ -15,16 +15,13 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
+import { getCurrentLocalDateString, formatDateTimeWIB } from '../../utils/dateUtils';
 
 export default function ReportRecapView() {
   const { currentUser } = useAuth();
   const [period, setPeriod] = useState('daily');
-  // Default to today, or if no data, allow changing date
-  const [selectedDate, setSelectedDate] = useState(() => {
-    // If today is after seeded dates, default to 2026-09-10 to see immediate rich data, or current ISO date
-    const today = new Date().toISOString().split('T')[0];
-    return today;
-  });
+  // Default to today in WIB
+  const [selectedDate, setSelectedDate] = useState(() => getCurrentLocalDateString());
 
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState(null);
@@ -562,8 +559,8 @@ export default function ReportRecapView() {
                         <td className="py-3 px-3 font-bold text-[#155ea3]">
                           {p.prescription_code}
                         </td>
-                        <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
-                          {p.created_at ? p.created_at.slice(0, 16).replace('T', ' ') : '-'}
+                        <td className="py-3 px-3 text-slate-500 whitespace-nowrap font-mono text-xs">
+                          {formatDateTimeWIB(p.created_at)}
                         </td>
                         <td className="py-3 px-3">
                           <div className="font-bold text-slate-900">

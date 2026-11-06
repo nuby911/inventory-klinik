@@ -184,10 +184,11 @@ function createPrescription(req, res) {
         throw new Error('Pasien tidak ditemukan');
       }
 
+      const nowIso = new Date().toISOString();
       const insertRx = db.prepare(`
-        INSERT INTO prescriptions (prescription_code, patient_id, doctor_id, status, is_cito, notes)
-        VALUES (?, ?, ?, 'pending', 0, ?)
-      `).run(prescription_code, resolvedPatientId, doctor_id, notes || null);
+        INSERT INTO prescriptions (prescription_code, patient_id, doctor_id, status, is_cito, notes, created_at)
+        VALUES (?, ?, ?, 'pending', 0, ?, ?)
+      `).run(prescription_code, resolvedPatientId, doctor_id, notes || null, nowIso);
 
       const rxId = insertRx.lastInsertRowid;
 

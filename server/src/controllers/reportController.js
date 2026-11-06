@@ -1,27 +1,31 @@
 const db = require('../config/database');
 
 function buildDateFilter(dateColumn, period, targetDate, startDate, endDate) {
+  // Use '+7 hours' to translate SQLite UTC timestamps to Indonesia Western Time (WIB)
+  const wibCol = `DATE(${dateColumn}, '+7 hours')`;
+  const wibMonth = `strftime('%Y-%m', ${dateColumn}, '+7 hours')`;
+
   if (startDate && endDate) {
     return {
-      clause: `WHERE DATE(${dateColumn}) BETWEEN DATE(?) AND DATE(?)`,
+      clause: `WHERE ${wibCol} BETWEEN DATE(?) AND DATE(?)`,
       params: [startDate, endDate]
     };
   }
   if (period === 'daily') {
     return {
-      clause: `WHERE DATE(${dateColumn}) = DATE(?)`,
+      clause: `WHERE ${wibCol} = DATE(?)`,
       params: [targetDate]
     };
   }
   if (period === 'weekly') {
     return {
-      clause: `WHERE DATE(${dateColumn}) BETWEEN DATE(?, '-6 days') AND DATE(?)`,
+      clause: `WHERE ${wibCol} BETWEEN DATE(?, '-6 days') AND DATE(?)`,
       params: [targetDate, targetDate]
     };
   }
   if (period === 'monthly') {
     return {
-      clause: `WHERE strftime('%Y-%m', ${dateColumn}) = strftime('%Y-%m', ?)`,
+      clause: `WHERE ${wibMonth} = strftime('%Y-%m', ?)`,
       params: [targetDate]
     };
   }
@@ -32,7 +36,7 @@ function buildDateFilter(dateColumn, period, targetDate, startDate, endDate) {
     };
   }
   return {
-    clause: `WHERE DATE(${dateColumn}) = DATE(?)`,
+    clause: `WHERE ${wibCol} = DATE(?)`,
     params: [targetDate]
   };
 }
@@ -41,8 +45,9 @@ function getRecapReport(req, res) {
   try {
     const { period = 'daily', date, startDate, endDate } = req.query;
 
-    // Resolve date boundary (defaults to targetDate or current date)
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    // Resolve date boundary in WIB (defaults to targetDate or current date in Asia/Jakarta)
+    const todayWib = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+    const targetDate = date || todayWib;
 
     const rxFilter = buildDateFilter('p.created_at', period, targetDate, startDate, endDate);
     const whereClause = rxFilter.clause;
@@ -103,16 +108,16 @@ function getRecapReport(req, res) {
       LIMIT 10
     `).all(...itemFilter.params);
 
-    // 4. Daily trends inside the selected range
+    // 4. Daily trends inside the selected range (grouped by WIB date)
     const dailyTrends = db.prepare(`
       SELECT 
-        DATE(p.created_at) as date,
+        DATE(p.created_at, '+7 hours') as date,
         COUNT(*) as total,
         SUM(CASE WHEN p.status = 'completed' THEN 1 ELSE 0 END) as completed,
         SUM(CASE WHEN p.status = 'pending' THEN 1 ELSE 0 END) as pending
       FROM prescriptions p
       ${whereClause}
-      GROUP BY DATE(p.created_at)
+      GROUP BY DATE(p.created_at, '+7 hours')
       ORDER BY date ASC
     `).all(...params);
 

@@ -99,10 +99,11 @@ function addBatch(req, res) {
     const qtyBase = convertToBaseUnit(medicine_id, unitToUse, Number(quantity_input));
 
     const insertTx = db.transaction(() => {
+      const nowIso = new Date().toISOString();
       const insertBatchStmt = db.prepare(`
-        INSERT INTO medicine_batches (medicine_id, batch_number, expired_date, stock_qty, rack_location, distributor)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(medicine_id, batch_number, expired_date, qtyBase, rack_location || med.rack_location, distributor || 'Supplier Utama');
+        INSERT INTO medicine_batches (medicine_id, batch_number, expired_date, stock_qty, rack_location, distributor, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(medicine_id, batch_number, expired_date, qtyBase, rack_location || med.rack_location, distributor || 'Supplier Utama', nowIso);
 
       // Update medicine total stock
       db.prepare('UPDATE medicines SET total_stock = total_stock + ? WHERE id = ?').run(qtyBase, medicine_id);

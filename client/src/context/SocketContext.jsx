@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { SocketContext } from './socketContextDef';
 import { useAuth } from './useAuth';
+import { formatTimeWIB } from '../utils/dateUtils';
 
 export function SocketProvider({ children }) {
   const { currentUser } = useAuth();
@@ -44,7 +45,7 @@ export function SocketProvider({ children }) {
         type: 'prescription:new',
         title: '📋 E-Resep Baru Diterima',
         message: `${newRx.patient_name} (${newRx.medical_record_number}) - ${newRx.item_count} item obat`,
-        timestamp: new Date().toLocaleTimeString(),
+        timestamp: formatTimeWIB(new Date()),
       });
 
       // Play soft notification beep using Web Audio API (no external file needed)

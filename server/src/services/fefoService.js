@@ -189,8 +189,8 @@ function dispensePrescriptionFEFO(prescriptionId, pharmacistUserId = null) {
 
     const insertItemBatchStmt = db.prepare(`
       INSERT INTO prescription_item_batches 
-      (prescription_item_id, batch_id, batch_number, expired_date, dispensed_qty, pharmacist_id)
-      VALUES (?, ?, ?, ?, ?, ?)
+      (prescription_item_id, batch_id, batch_number, expired_date, dispensed_qty, pharmacist_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
     const updateRxStatusStmt = db.prepare(`
@@ -229,7 +229,8 @@ function dispensePrescriptionFEFO(prescriptionId, pharmacistUserId = null) {
           alloc.batchNumber,
           alloc.expiredDate,
           alloc.takeQty,
-          pharmacistUserId || null
+          pharmacistUserId || null,
+          new Date().toISOString()
         );
       }
 

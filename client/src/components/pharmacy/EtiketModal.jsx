@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Printer, Tag } from 'lucide-react';
+import { formatDateID } from '../../utils/dateUtils';
 
 export default function EtiketModal({ isOpen, onClose, etiketData }) {
   const [filterType, setFilterType] = useState('all');
@@ -126,7 +127,7 @@ export default function EtiketModal({ isOpen, onClose, etiketData }) {
                   {/* Info Pasien & Resep */}
                   <div className="grid grid-cols-2 text-[11px] gap-y-1">
                     <div>No. Resep: <span className="font-mono font-semibold">{item.prescriptionCode}</span></div>
-                    <div className="text-right">Tgl: <span className="font-medium">{new Date(item.date).toLocaleDateString('id-ID')}</span></div>
+                    <div className="text-right">Tgl: <span className="font-medium">{formatDateID(item.date)}</span></div>
                     <div>Pasien: <span className="font-bold">{item.patientName}</span></div>
                     <div className="text-right">No. RM: <span className="font-mono">{item.medicalRecordNumber}</span></div>
                   </div>

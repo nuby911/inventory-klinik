@@ -125,11 +125,12 @@ function createAdjustment(req, res) {
         throw new Error('Gagal memotong stok master: sisa stok master tidak mencukupi.');
       }
 
-      // Insert adjustment log
+      // Insert adjustment log with explicit ISO UTC timestamp
+      const nowIso = new Date().toISOString();
       const insertStmt = db.prepare(`
         INSERT INTO stock_adjustments 
-        (adjustment_code, batch_id, user_id, adjustment_type, quantity_base_unit, reason, distributor)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        (adjustment_code, batch_id, user_id, adjustment_type, quantity_base_unit, reason, distributor, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         adjustment_code,
         batch_id,
@@ -137,7 +138,8 @@ function createAdjustment(req, res) {
         adjustment_type,
         qtyBase,
         reason,
-        distributor || batch.distributor || 'Supplier Terkait'
+        distributor || batch.distributor || 'Supplier Terkait',
+        nowIso
       );
 
       return insertStmt.lastInsertRowid;

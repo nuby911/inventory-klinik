@@ -3,6 +3,7 @@ import { UserPlus, Search, UserCheck, X } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
 import { useSocket } from '../../context/useSocket';
+import { formatDateTimeWIB } from '../../utils/dateUtils';
 
 // Calculate age from birth date string (e.g. '1984-03-12')
 function calculateAge(birthDateStr) {
@@ -880,8 +881,8 @@ export default function DoctorPortal({ activeSubTab }) {
                       <div className="font-semibold text-slate-800">{rx.patient_name}</div>
                       <div className="text-[10px] text-slate-400">{rx.medical_record_number}</div>
                     </td>
-                    <td className="py-2.5 px-3 text-[11px]">
-                      {new Date(rx.created_at).toLocaleDateString('id-ID')} {new Date(rx.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">
+                      {formatDateTimeWIB(rx.created_at)}
                     </td>
                     <td className="py-2.5 px-3">
                       {rx.item_count} item obat

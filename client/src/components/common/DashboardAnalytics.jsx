@@ -11,16 +11,7 @@ import {
 import { api } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
 import { useSocket } from '../../context/useSocket';
-
-function timeAgo(dateStr) {
-  if (!dateStr) return '-';
-  const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000);
-  if (diff < 1) return 'Baru saja';
-  if (diff < 60) return `${diff} mnt lalu`;
-  const hrs = Math.floor(diff / 60);
-  if (hrs < 24) return `${hrs} jam lalu`;
-  return `${Math.floor(hrs / 24)} hari lalu`;
-}
+import { timeAgo, formatTimeWIB } from '../../utils/dateUtils';
 
 export default function DashboardAnalytics({ setActiveSubTab }) {
   const { currentUser } = useAuth();
@@ -343,7 +334,8 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
                       </td>
 
                       <td className="py-3 px-3.5 text-slate-500">
-                        {timeAgo(rx.created_at)}
+                        <div className="font-medium text-slate-700">{timeAgo(rx.created_at)}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{formatTimeWIB(rx.created_at)}</div>
                       </td>
 
                       <td className="py-3 px-3.5 text-right">

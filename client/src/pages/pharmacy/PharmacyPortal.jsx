@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useSocket } from '../../context/useSocket';
 import EtiketModal from '../../components/pharmacy/EtiketModal';
+import { formatTimeWIB, formatDateTimeWIB } from '../../utils/dateUtils';
 
 export default function PharmacyPortal({ activeSubTab }) {
   const { socket } = useSocket();
@@ -335,7 +336,7 @@ export default function PharmacyPortal({ activeSubTab }) {
 
                       <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
                         <span>{rx.item_count} item obat</span>
-                        <span>{new Date(rx.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
+                        <span className="font-medium text-slate-600">{formatTimeWIB(rx.created_at)}</span>
                       </div>
                     </div>
                   );
@@ -642,7 +643,7 @@ export default function PharmacyPortal({ activeSubTab }) {
                     <td className="py-2.5 px-3 font-mono font-bold text-slate-900">{rx.prescription_code}</td>
                     <td className="py-2.5 px-3">{rx.patient_name} ({rx.medical_record_number})</td>
                     <td className="py-2.5 px-3">{rx.doctor_name}</td>
-                    <td className="py-2.5 px-3 text-[11px]">{new Date(rx.created_at).toLocaleTimeString('id-ID')} WIB</td>
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">{formatDateTimeWIB(rx.created_at)}</td>
                     <td className="py-2.5 px-3">
                       <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded font-semibold text-[10px] border border-emerald-200">
                         Diserahkan

@@ -1,19 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Bell, 
   Home, 
   Menu, 
-  LogOut
+  LogOut,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../../context/useAuth';
 import { useSocket } from '../../context/useSocket';
+import { formatDateID, formatTimeWIB } from '../../utils/dateUtils';
 
 export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }) {
   const { currentUser, logout } = useAuth();
   const { incomingAlert, setIncomingAlert } = useSocket();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [liveTime, setLiveTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const roleShortcuts = {
     dokter: [
@@ -142,6 +152,9 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
               {incomingAlert.title}:
             </span>
             <span>{incomingAlert.message}</span>
+            {incomingAlert.timestamp && (
+              <span className="text-white/70 font-mono text-[11px]">({incomingAlert.timestamp})</span>
+            )}
           </div>
           <button 
             onClick={() => setIncomingAlert(null)} 
@@ -237,17 +250,34 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
 
       {/* Hero Context Header */}
       <div className="px-3 sm:px-6 lg:px-8 py-3 sm:py-5 pb-3.5 sm:pb-6">
-        <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-white drop-shadow-xs">
-          {info.title}
-        </h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-white drop-shadow-xs">
+              {info.title}
+            </h1>
 
-        <div className="hidden sm:flex items-center gap-2 text-xs text-white/90 mt-1 font-medium">
-          <div className="flex items-center gap-1.5">
-            <Home className="w-3.5 h-3.5 text-white/80" />
-            <span>/</span>
-            <span className="text-white/80">{info.category}</span>
-            <span>/</span>
-            <span className="text-white font-semibold underline decoration-white/40 underline-offset-2">{info.title}</span>
+            <div className="hidden sm:flex items-center gap-2 text-xs text-white/90 mt-1 font-medium">
+              <div className="flex items-center gap-1.5">
+                <Home className="w-3.5 h-3.5 text-white/80" />
+                <span>/</span>
+                <span className="text-white/80">{info.category}</span>
+                <span>/</span>
+                <span className="text-white font-semibold underline decoration-white/40 underline-offset-2">{info.title}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Real-time Live Clock (WIB) */}
+          <div className="inline-flex items-center gap-2 self-start sm:self-auto bg-black/20 hover:bg-black/30 border border-white/20 rounded-xl px-2.5 sm:px-3.5 py-1.5 backdrop-blur-md shadow-xs transition">
+            <Clock className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-emerald-400 shrink-0 animate-pulse" />
+            <div className="text-[11px] sm:text-xs font-medium text-white flex items-center gap-1.5 whitespace-nowrap">
+              <span className="hidden sm:inline">{formatDateID(liveTime, 'full')}</span>
+              <span className="inline sm:hidden">{formatDateID(liveTime, 'short')}</span>
+              <span className="text-white/40">·</span>
+              <span className="font-mono text-emerald-300 font-bold tracking-wider">
+                {formatTimeWIB(liveTime, true)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
