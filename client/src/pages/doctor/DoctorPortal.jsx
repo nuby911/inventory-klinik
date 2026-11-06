@@ -47,6 +47,7 @@ export default function DoctorPortal({ activeSubTab }) {
 
   // Prescription Form State
   const [prescriptionType, setPrescriptionType] = useState('standard');
+  const [doctorMobileTab, setDoctorMobileTab] = useState('catalog'); // 'catalog' | 'pad' for mobile (< lg)
   const [prescriptionItems, setPrescriptionItems] = useState([
     {
       medicine_id: 1,
@@ -318,6 +319,7 @@ export default function DoctorPortal({ activeSubTab }) {
       setActionSuccess(`E-Resep ${res.data.prescription_code} berhasil dikirim ke antrean apotek.`);
       setPrescriptionItems([]);
       setDoctorNotes('');
+      setDoctorMobileTab('catalog');
       loadDoctorHistory();
       setTimeout(() => setActionSuccess(null), 4000);
     } catch (err) {
@@ -369,32 +371,32 @@ export default function DoctorPortal({ activeSubTab }) {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
               {selectedPatient?.allergies && selectedPatient.allergies !== 'Tidak Ada' && (
                 <div className="px-2.5 py-1 bg-rose-50 border border-rose-300 text-rose-800 rounded font-semibold text-[11px]">
                   Alergi: {selectedPatient.allergies} (Sediaan Terkait Dikunci)
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setNewPatientModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#155ea3] hover:bg-[#0f3d6b] text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#155ea3] hover:bg-[#0f3d6b] text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer shrink-0"
                   title="Daftarkan atau masukkan nama pasien baru langsung"
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>+ Pasien Baru</span>
                 </button>
 
-                <div className="flex items-center gap-1.5">
-                  <div className="relative">
+                <div className="flex items-center gap-1.5 flex-1 sm:flex-initial">
+                  <div className="relative flex-1 sm:w-36">
                     <input
                       type="text"
                       placeholder="Cari pasien / RM..."
                       value={patientSearchQuery}
                       onChange={(e) => setPatientSearchQuery(e.target.value)}
-                      className="w-32 sm:w-40 pl-6 pr-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[#155ea3]"
+                      className="w-full pl-6 pr-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-800 placeholder-slate-400 focus:outline-hidden focus:border-[#155ea3]"
                     />
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-1.5 top-2 pointer-events-none" />
                   </div>
@@ -408,7 +410,7 @@ export default function DoctorPortal({ activeSubTab }) {
                       const p = patients.find(x => x.id === Number(e.target.value));
                       if (p) setSelectedPatient(p);
                     }}
-                    className="bg-white border border-slate-300 rounded px-2.5 py-1.5 text-slate-800 font-medium text-xs focus:outline-hidden focus:border-[#155ea3] max-w-[200px]"
+                    className="bg-white border border-slate-300 rounded px-2.5 py-1.5 text-slate-800 font-medium text-xs focus:outline-hidden focus:border-[#155ea3] flex-1 sm:max-w-[180px]"
                   >
                     <option value="NEW_PATIENT" className="font-bold text-[#155ea3]">
                       + Ketik / Tambah Pasien Baru...
@@ -438,10 +440,46 @@ export default function DoctorPortal({ activeSubTab }) {
             </div>
           )}
 
+          {/* Mobile Segmented Switcher (< lg) */}
+          <div className="lg:hidden flex items-center bg-slate-100 p-1 rounded-xl mb-3 border border-slate-200 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setDoctorMobileTab('catalog')}
+              className={`flex-1 py-2 text-center rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                doctorMobileTab === 'catalog'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>💊 Katalog Obat</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700">
+                {filteredMeds.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDoctorMobileTab('pad')}
+              className={`flex-1 py-2 text-center rounded-lg transition relative cursor-pointer flex items-center justify-center gap-1.5 ${
+                doctorMobileTab === 'pad'
+                  ? 'bg-[#155ea3] text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>📝 Lembar Resep</span>
+              {prescriptionItems.length > 0 && (
+                <span className={`px-1.5 py-0.2 text-[10px] rounded-full font-bold ${
+                  doctorMobileTab === 'pad' ? 'bg-white text-[#155ea3]' : 'bg-[#ec1415] text-white'
+                }`}>
+                  {prescriptionItems.length}
+                </span>
+              )}
+            </button>
+          </div>
+
           {/* Two Columns: Catalog & Prescription Pad */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* Catalog */}
-            <div className="lg:col-span-5 space-y-3">
+            <div className={`lg:col-span-5 space-y-3 ${doctorMobileTab === 'catalog' ? 'block' : 'hidden lg:block'}`}>
               <div className="bg-white rounded-lg border border-slate-200 p-3 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs text-slate-800 uppercase tracking-wide">
@@ -525,10 +563,42 @@ export default function DoctorPortal({ activeSubTab }) {
                   );
                 })}
               </div>
+
+              {/* Floating CTA for Mobile Doctor when items selected */}
+              {doctorMobileTab === 'catalog' && prescriptionItems.length > 0 && (
+                <div className="lg:hidden sticky bottom-20 z-30 pt-2 pb-1">
+                  <button
+                    type="button"
+                    onClick={() => setDoctorMobileTab('pad')}
+                    className="w-full py-2.5 px-4 bg-[#155ea3] hover:bg-[#0f3d6b] text-white font-bold text-xs rounded-xl shadow-lg flex items-center justify-between transition cursor-pointer active:scale-98"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-white text-[#155ea3] flex items-center justify-center font-bold text-[11px]">
+                        {prescriptionItems.length}
+                      </span>
+                      <span>Obat Terpilih di Resep</span>
+                    </span>
+                    <span className="flex items-center gap-1 font-semibold">
+                      Buka Lembar Resep →
+                    </span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Prescription Pad */}
-            <div className="lg:col-span-7 space-y-3">
+            <div className={`lg:col-span-7 space-y-3 ${doctorMobileTab === 'pad' ? 'block' : 'hidden lg:block'}`}>
+              {/* Mobile Back Button to Catalog */}
+              <div className="lg:hidden pb-1">
+                <button
+                  type="button"
+                  onClick={() => setDoctorMobileTab('catalog')}
+                  className="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  <span>← Tambah Obat Lain (Buka Katalog)</span>
+                </button>
+              </div>
+
               <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3.5">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
                   <div className="flex items-center gap-1.5">
@@ -743,25 +813,25 @@ export default function DoctorPortal({ activeSubTab }) {
                   />
                 </div>
 
-                <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+                <div className="pt-2 border-t border-slate-200 flex items-center justify-between gap-3">
                   <button
                     type="button"
                     onClick={() => {
                       setPrescriptionItems([]);
                       setDoctorNotes('');
                     }}
-                    className="text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
+                    className="text-xs text-slate-500 hover:text-slate-800 cursor-pointer py-2 px-3 rounded hover:bg-slate-100 transition"
                   >
-                    Reset
+                    Reset Form
                   </button>
 
                   <button
                     type="button"
                     onClick={handleSubmit}
                     disabled={submitting || prescriptionItems.length === 0}
-                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded transition cursor-pointer disabled:opacity-50"
+                    className="flex-1 sm:flex-initial px-5 py-2.5 bg-[#155ea3] hover:bg-[#0f3d6b] text-white font-bold text-xs rounded-lg shadow-xs transition cursor-pointer disabled:opacity-50 text-center active:scale-98"
                   >
-                    {submitting ? 'Mengirim...' : 'Kirim E-Resep ke Apotek'}
+                    {submitting ? 'Mengirim...' : 'Kirim E-Resep ke Apotek →'}
                   </button>
                 </div>
               </div>

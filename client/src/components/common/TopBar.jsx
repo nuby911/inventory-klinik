@@ -153,9 +153,9 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
       )}
 
       {/* Top Navbar Row */}
-      <div className="px-6 lg:px-8 py-3.5 flex items-center justify-between border-b border-white/10">
+      <div className="px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex items-center justify-between border-b border-white/10">
         {/* Left: Mobile Toggle & Search Input */}
-        <div className="flex items-center gap-3 flex-1 max-w-md">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 max-w-md">
           <button
             onClick={onToggleMobile}
             className="lg:hidden p-2 rounded-full bg-white/15 hover:bg-white/25 text-white transition cursor-pointer"
@@ -208,7 +208,7 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
         </div>
 
         {/* Right: Notifications & User Profile */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5">
           <button 
             className="p-2 rounded-full bg-white/15 hover:bg-white/25 text-white transition cursor-pointer relative"
             title="Pemberitahuan Sistem"
@@ -217,9 +217,9 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
             <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#ec1415] ring-2 ring-[#0f3d6b]" />
           </button>
 
-          <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-full border border-white/20 backdrop-blur-xs">
-            <span className="text-xs font-bold text-white">{currentUser?.name}</span>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#ec1415] text-white px-2.5 py-0.5 rounded-full shadow-xs">
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-black/20 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border border-white/20 backdrop-blur-xs">
+            <span className="text-xs font-bold text-white max-w-[70px] sm:max-w-none truncate">{currentUser?.name}</span>
+            <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider bg-[#ec1415] text-white px-2 sm:px-2.5 py-0.5 rounded-full shadow-xs">
               {currentUser?.role}
             </span>
           </div>
@@ -236,12 +236,12 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
       </div>
 
       {/* Hero Context Header */}
-      <div className="px-6 lg:px-8 py-5 pb-6">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white drop-shadow-xs">
+      <div className="px-3 sm:px-6 lg:px-8 py-3 sm:py-5 pb-3.5 sm:pb-6">
+        <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-white drop-shadow-xs">
           {info.title}
         </h1>
 
-        <div className="flex items-center gap-2 text-xs text-white/90 mt-1 font-medium">
+        <div className="hidden sm:flex items-center gap-2 text-xs text-white/90 mt-1 font-medium">
           <div className="flex items-center gap-1.5">
             <Home className="w-3.5 h-3.5 text-white/80" />
             <span>/</span>

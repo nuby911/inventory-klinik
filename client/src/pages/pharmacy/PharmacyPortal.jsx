@@ -11,6 +11,7 @@ export default function PharmacyPortal({ activeSubTab }) {
   const [selectedRx, setSelectedRx] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [pharmacyMobileTab, setPharmacyMobileTab] = useState('queue'); // 'queue' | 'workstation' for mobile (< lg)
 
   // Checklist 5 Benar
   const [checklist, setChecklist] = useState({
@@ -225,9 +226,45 @@ export default function PharmacyPortal({ activeSubTab }) {
             </div>
           </div>
 
+          {/* Mobile Segmented Switcher (< lg) */}
+          <div className="lg:hidden flex items-center bg-slate-100 p-1 rounded-xl mb-3 border border-slate-200 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setPharmacyMobileTab('queue')}
+              className={`flex-1 py-2 text-center rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                pharmacyMobileTab === 'queue'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>📋 Antrean Masuk</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700">
+                {filteredQueue.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPharmacyMobileTab('workstation')}
+              className={`flex-1 py-2 text-center rounded-lg transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                pharmacyMobileTab === 'workstation'
+                  ? 'bg-[#155ea3] text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>💊 Meja Racik</span>
+              {selectedRx && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                  pharmacyMobileTab === 'workstation' ? 'bg-white text-[#155ea3]' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {selectedRx.prescription_code}
+                </span>
+              )}
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* Left: Queue List (5 cols) */}
-            <div className="lg:col-span-5 space-y-3">
+            <div className={`lg:col-span-5 space-y-3 ${pharmacyMobileTab === 'queue' ? 'block' : 'hidden lg:block'}`}>
               <div className="bg-white rounded-lg border border-slate-200 p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs text-slate-800 uppercase tracking-wide">
@@ -268,7 +305,10 @@ export default function PharmacyPortal({ activeSubTab }) {
                   return (
                     <div
                       key={rx.id}
-                      onClick={() => loadRxDetail(rx.id)}
+                      onClick={() => {
+                        loadRxDetail(rx.id);
+                        setPharmacyMobileTab('workstation');
+                      }}
                       className={`p-3 rounded-lg border text-xs cursor-pointer transition ${
                         isSelected ? 'border-slate-800 bg-slate-50' : 'border-slate-200 bg-white hover:border-slate-300'
                       }`}
@@ -304,7 +344,18 @@ export default function PharmacyPortal({ activeSubTab }) {
             </div>
 
             {/* Right: Dispensing Workstation (7 cols) */}
-            <div className="lg:col-span-7 space-y-3">
+            <div className={`lg:col-span-7 space-y-3 ${pharmacyMobileTab === 'workstation' ? 'block' : 'hidden lg:block'}`}>
+              {/* Mobile Back Button to Queue */}
+              <div className="lg:hidden pb-1">
+                <button
+                  type="button"
+                  onClick={() => setPharmacyMobileTab('queue')}
+                  className="w-full py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  <span>← Kembali ke Antrean Masuk</span>
+                </button>
+              </div>
+
               {selectedRx ? (
                 <div className="bg-white rounded-lg border border-slate-200 p-4 space-y-3.5 text-xs">
                   <div className="flex items-start justify-between border-b border-slate-200 pb-2.5">
@@ -400,21 +451,21 @@ export default function PharmacyPortal({ activeSubTab }) {
                   )}
 
                   {/* Action Buttons */}
-                  <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                  <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                     <button
                       type="button"
                       onClick={handleOpenEtiket}
-                      className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 rounded font-medium text-xs cursor-pointer"
+                      className="w-full sm:w-auto px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 rounded-lg font-semibold text-xs cursor-pointer text-center"
                     >
                       Cetak Etiket Aturan Pakai
                     </button>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                       {selectedRx.status === 'pending' && (
                         <button
                           type="button"
                           onClick={handleStartPreparing}
-                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded font-medium text-xs cursor-pointer"
+                          className="w-full sm:w-auto px-4 py-2 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-800 rounded-lg font-semibold text-xs cursor-pointer text-center"
                         >
                           Mulai Diracik
                         </button>
@@ -425,12 +476,12 @@ export default function PharmacyPortal({ activeSubTab }) {
                           type="button"
                           onClick={handleDispense}
                           disabled={dispensing}
-                          className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded font-semibold text-xs cursor-pointer disabled:opacity-50"
+                          className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-xs cursor-pointer disabled:opacity-50 text-center shadow-xs active:scale-98"
                         >
                           {dispensing ? 'Memproses...' : 'Konfirmasi Penyerahan & Potong Stok'}
                         </button>
                       ) : (
-                        <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded font-semibold text-xs">
+                        <span className="w-full sm:w-auto px-3.5 py-2 bg-emerald-100 text-emerald-800 rounded-lg font-semibold text-xs text-center">
                           Obat Telah Diserahkan
                         </span>
                       )}

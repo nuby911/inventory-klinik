@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
-import { ShieldAlert, XCircle } from 'lucide-react';
+import { 
+  ShieldAlert, 
+  XCircle,
+  LayoutDashboard,
+  FileEdit,
+  History,
+  Pill,
+  Clock,
+  AlertTriangle,
+  Boxes,
+  Package,
+  Layers,
+  BarChart3
+} from 'lucide-react';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './context/useAuth';
 import { SocketProvider } from './context/SocketContext';
@@ -43,6 +56,30 @@ const ROUTE_RULES = {
     allowedKeywords: ['apoteker', 'pharmacy', 'farmasi', 'queue_dispensing', 'stock_monitoring', 'expiry_monitoring', 'dispensed_history', 'dashboard', 'reports', 'laporan'],
     subtabs: ['dashboard', 'reports', 'queue_dispensing', 'stock_monitoring', 'dispensed_history']
   }
+};
+
+const ROLE_BOTTOM_NAV = {
+  dokter: [
+    { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
+    { id: 'write_prescription', label: 'E-Resep', icon: FileEdit },
+    { id: 'prescription_history', label: 'Riwayat', icon: History },
+    { id: 'medicine_catalog', label: 'Katalog', icon: Pill },
+    { id: 'reports', label: 'Laporan', icon: BarChart3 }
+  ],
+  apoteker: [
+    { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
+    { id: 'queue_dispensing', label: 'Antrean', icon: Clock },
+    { id: 'stock_monitoring', label: 'Stok', icon: AlertTriangle },
+    { id: 'dispensed_history', label: 'Selesai', icon: History },
+    { id: 'reports', label: 'Laporan', icon: BarChart3 }
+  ],
+  admin: [
+    { id: 'dashboard', label: 'Beranda', icon: LayoutDashboard },
+    { id: 'inventory_master', label: 'Master', icon: Boxes },
+    { id: 'restock_batches', label: 'Restock', icon: Package },
+    { id: 'logistics_overview', label: 'Tata Rak', icon: Layers },
+    { id: 'reports', label: 'Laporan', icon: BarChart3 }
+  ]
 };
 
 function MainApp() {
@@ -205,7 +242,7 @@ function MainApp() {
         )}
 
         {/* Dedicated Workspace View based on Logged-in Role */}
-        <main className="flex-1 p-3 sm:p-5 lg:p-8 -mt-2">
+        <main className="flex-1 p-2 sm:p-5 lg:p-8 -mt-2 pb-24 lg:pb-8">
           <Suspense fallback={<PortalFallback />}>
             {activeSubTab === 'reports' ? (
               <ReportRecapView />
@@ -228,6 +265,39 @@ function MainApp() {
             )}
           </Suspense>
         </main>
+
+        {/* Mobile Bottom Navigation Bar (Optimized for one-handed operation on mobile & tablets) */}
+        <nav 
+          aria-label="Navigasi Bawah Mobile" 
+          className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#d4e7f3] lg:hidden shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-1 py-1.5 flex items-center justify-around"
+        >
+          {(ROLE_BOTTOM_NAV[currentUser?.role] || []).map((item) => {
+            const Icon = item.icon;
+            const isActive = activeSubTab === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleTabChange(item.id)}
+                className={`flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-xl transition-all cursor-pointer relative ${
+                  isActive 
+                    ? 'text-[#155ea3] font-bold' 
+                    : 'text-slate-500 hover:text-slate-800 font-medium'
+                }`}
+              >
+                <div className={`p-1 rounded-lg transition-transform ${isActive ? 'bg-[#eef5fc] scale-105' : ''}`}>
+                  <Icon className={`w-5 h-5 ${isActive ? 'text-[#155ea3]' : 'text-slate-400'}`} />
+                </div>
+                <span className="text-[10px] tracking-tight mt-0.5 truncate max-w-[64px]">
+                  {item.label}
+                </span>
+                {isActive && (
+                  <span className="w-1 h-1 rounded-full bg-[#155ea3] mt-0.5" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );
