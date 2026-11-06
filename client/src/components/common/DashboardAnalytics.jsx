@@ -292,53 +292,23 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
             </div>
           </div>
 
-          {/* Isi Tabel */}
-          <div className="overflow-x-auto flex-1">
+          {/* Isi Data Resep: Mobile Cards & Desktop Table */}
+          <div className="flex-1">
             {filteredPrescriptions.length === 0 ? (
               <div className="py-12 text-center text-slate-400 text-xs">
                 <FileText className="w-6 h-6 mx-auto mb-2 text-slate-300" />
                 Tidak ada data resep yang sesuai kriteria.
               </div>
             ) : (
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-500 bg-slate-50/70">
-                    <th className="py-2.5 px-3.5">Kode Resep</th>
-                    <th className="py-2.5 px-3.5">Pasien</th>
-                    <th className="py-2.5 px-3.5">Dokter</th>
-                    <th className="py-2.5 px-3.5 text-center">Item</th>
-                    <th className="py-2.5 px-3.5">Waktu</th>
-                    <th className="py-2.5 px-3.5 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
+              <>
+                {/* Mobile Card View (Optimized for Smartphone) */}
+                <div className="divide-y divide-slate-100 sm:hidden">
                   {filteredPrescriptions.map(rx => (
-                    <tr key={rx.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-3.5 font-mono text-slate-900 font-medium">
-                        <span>{rx.prescription_code}</span>
-                      </td>
-
-                      <td className="py-3 px-3.5">
-                        <div className="font-semibold text-slate-900">{rx.patient_name}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">
-                          {rx.medical_record_number} · {rx.gender === 'L' ? 'L' : 'P'}
-                        </div>
-                      </td>
-
-                      <td className="py-3 px-3.5 text-slate-600">
-                        {rx.doctor_name}
-                      </td>
-
-                      <td className="py-3 px-3.5 text-center font-medium text-slate-600">
-                        {rx.item_count} obat
-                      </td>
-
-                      <td className="py-3 px-3.5 text-slate-500">
-                        <div className="font-medium text-slate-700">{timeAgo(rx.created_at)}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{formatTimeWIB(rx.created_at)}</div>
-                      </td>
-
-                      <td className="py-3 px-3.5 text-right">
+                    <div key={rx.id} className="p-3.5 space-y-2 hover:bg-slate-50/80 transition-colors">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono font-bold text-xs text-[#155ea3]">
+                          {rx.prescription_code}
+                        </span>
                         <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
                           rx.status === 'pending'
                             ? 'bg-amber-100 text-amber-800'
@@ -348,11 +318,90 @@ export default function DashboardAnalytics({ setActiveSubTab }) {
                         }`}>
                           {rx.status === 'pending' ? 'Menunggu' : rx.status === 'preparing' ? 'Diracik' : 'Selesai'}
                         </span>
-                      </td>
-                    </tr>
+                      </div>
+
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div>
+                          <div className="font-bold text-slate-900 text-xs">{rx.patient_name}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            {rx.medical_record_number} · {rx.gender === 'L' ? 'Laki-laki' : 'Perempuan'}
+                          </div>
+                        </div>
+                        <div className="text-right text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                          {rx.item_count} obat
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
+                        <span className="text-slate-500 truncate max-w-[140px]">{rx.doctor_name}</span>
+                        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-md px-2 py-0.5">
+                          <Clock className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span className="font-semibold text-slate-800">{timeAgo(rx.created_at)}</span>
+                          <span className="text-slate-300">·</span>
+                          <span className="font-mono text-slate-500 text-[10px]">{formatTimeWIB(rx.created_at)}</span>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-[11px] font-semibold text-slate-500 bg-slate-50/70">
+                        <th className="py-2.5 px-3.5">Kode Resep</th>
+                        <th className="py-2.5 px-3.5">Pasien</th>
+                        <th className="py-2.5 px-3.5">Dokter</th>
+                        <th className="py-2.5 px-3.5 text-center">Item</th>
+                        <th className="py-2.5 px-3.5">Waktu</th>
+                        <th className="py-2.5 px-3.5 text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-700">
+                      {filteredPrescriptions.map(rx => (
+                        <tr key={rx.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3 px-3.5 font-mono text-slate-900 font-medium">
+                            <span>{rx.prescription_code}</span>
+                          </td>
+
+                          <td className="py-3 px-3.5">
+                            <div className="font-semibold text-slate-900">{rx.patient_name}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">
+                              {rx.medical_record_number} · {rx.gender === 'L' ? 'L' : 'P'}
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3.5 text-slate-600">
+                            {rx.doctor_name}
+                          </td>
+
+                          <td className="py-3 px-3.5 text-center font-medium text-slate-600">
+                            {rx.item_count} obat
+                          </td>
+
+                          <td className="py-3 px-3.5 text-slate-500">
+                            <div className="font-medium text-slate-700">{timeAgo(rx.created_at)}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">{formatTimeWIB(rx.created_at)}</div>
+                          </td>
+
+                          <td className="py-3 px-3.5 text-right">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              rx.status === 'pending'
+                                ? 'bg-amber-100 text-amber-800'
+                                : rx.status === 'preparing'
+                                ? 'bg-blue-100 text-[#155ea3]'
+                                : 'bg-emerald-100 text-emerald-800'
+                            }`}>
+                              {rx.status === 'pending' ? 'Menunggu' : rx.status === 'preparing' ? 'Diracik' : 'Selesai'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
 

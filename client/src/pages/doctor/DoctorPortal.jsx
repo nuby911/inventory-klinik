@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { UserPlus, Search, UserCheck, X } from 'lucide-react';
+import { UserPlus, Search, UserCheck, X, Clock } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
 import { useSocket } from '../../context/useSocket';
-import { formatDateTimeWIB } from '../../utils/dateUtils';
+import { formatDateTimeWIB, timeAgo } from '../../utils/dateUtils';
 
 // Calculate age from birth date string (e.g. '1984-03-12')
 function calculateAge(birthDateStr) {
@@ -856,7 +856,51 @@ export default function DoctorPortal({ activeSubTab }) {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Card View */}
+          <div className="divide-y divide-slate-100 sm:hidden">
+            {loadingHistory ? (
+              <div className="text-center py-6 text-slate-400 text-xs">Memuat riwayat...</div>
+            ) : historyPrescriptions.length === 0 ? (
+              <div className="text-center py-6 text-slate-400 text-xs">Belum ada resep yang tercatat.</div>
+            ) : historyPrescriptions.map(rx => (
+              <div key={rx.id} className="py-3 space-y-2 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono font-bold text-xs text-[#155ea3]">{rx.prescription_code}</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
+                    rx.status === 'pending'
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : rx.status === 'preparing'
+                      ? 'bg-blue-50 text-blue-800 border-blue-200'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  }`}>
+                    {rx.status === 'pending' ? 'Menunggu di Apotek' : rx.status === 'preparing' ? 'Sedang Diracik' : 'Selesai'}
+                  </span>
+                </div>
+
+                <div className="flex items-baseline justify-between gap-2">
+                  <div>
+                    <div className="font-bold text-slate-900 text-xs">{rx.patient_name}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">{rx.medical_record_number}</div>
+                  </div>
+                  <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                    {rx.item_count} item obat
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
+                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded px-2 py-0.5">
+                    <Clock className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <span className="font-semibold text-slate-700">{timeAgo(rx.created_at)}</span>
+                    <span className="text-slate-300">·</span>
+                    <span className="font-mono text-slate-500 text-[10px]">{formatDateTimeWIB(rx.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-600">
               <thead className="bg-slate-50 text-slate-800 font-bold uppercase text-[10px] border-y border-slate-200">
                 <tr>

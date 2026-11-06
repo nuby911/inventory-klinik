@@ -525,7 +525,31 @@ export default function AdminPortal({ activeSubTab }) {
               </div>
             </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Card View for Batches */}
+          <div className="divide-y divide-slate-100 sm:hidden">
+            {batches.map(b => (
+              <div key={b.id} className="py-3 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="font-bold text-slate-900 text-xs">{b.medicine_name}</div>
+                  <span className="font-semibold text-xs text-[#155ea3] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                    {b.stock_qty} {b.base_unit}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-600">
+                  <span className="font-mono text-slate-500">#{b.batch_number}</span>
+                  <span className="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-medium text-slate-700">
+                    {b.rack_location || 'Rak Utama'}
+                  </span>
+                </div>
+                <div className="text-[11px] text-slate-500 pt-0.5">
+                  Kadaluarsa: <span className="font-bold text-slate-700">{b.expired_date}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-600">
               <thead className="bg-slate-50 text-slate-800 font-bold uppercase text-[10px] border-y border-slate-200">
                 <tr>

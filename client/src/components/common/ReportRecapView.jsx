@@ -530,7 +530,62 @@ export default function ReportRecapView() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Card View for Report Prescriptions */}
+          <div className="divide-y divide-slate-100 sm:hidden">
+            {filteredPrescriptions.length === 0 ? (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                Tidak ada resep yang sesuai kriteria pencarian.
+              </div>
+            ) : (
+              filteredPrescriptions.map((p) => {
+                const isCompleted = p.status === 'completed';
+                const isPreparing = p.status === 'preparing';
+
+                return (
+                  <div key={p.id} className="py-3 px-3 space-y-2 hover:bg-slate-50/60 transition">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-xs text-[#155ea3] font-mono">
+                        {p.prescription_code}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        isCompleted
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : isPreparing
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {p.status === 'completed' ? 'Selesai' : p.status === 'preparing' ? 'Disiapkan' : 'Menunggu'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <div className="font-bold text-slate-900 text-xs">
+                        {p.patient_name || 'Pasien Anonim'}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono">
+                        {p.medical_record_number || '-'} · {p.doctor_name || 'Dokter'}
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200/60 p-2 rounded-lg">
+                      <div className="text-[10px] uppercase font-bold text-slate-400 mb-0.5">Rincian Obat:</div>
+                      {p.medicines_summary || `${p.item_count || 0} item obat`}
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                      <div className="flex items-center gap-1.5 font-mono text-[10px] text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded-md">
+                        <Clock className="w-3 h-3 text-emerald-600 shrink-0" />
+                        <span>{formatDateTimeWIB(p.created_at)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop & Print Table View */}
+          <div className="hidden sm:block print:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">

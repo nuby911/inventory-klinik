@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Clock } from 'lucide-react';
 import { api } from '../../services/api';
 import { useSocket } from '../../context/useSocket';
 import EtiketModal from '../../components/pharmacy/EtiketModal';
-import { formatTimeWIB, formatDateTimeWIB } from '../../utils/dateUtils';
+import { formatTimeWIB, formatDateTimeWIB, timeAgo } from '../../utils/dateUtils';
 
 export default function PharmacyPortal({ activeSubTab }) {
   const { socket } = useSocket();
@@ -334,9 +335,14 @@ export default function PharmacyPortal({ activeSubTab }) {
                         </span>
                       </div>
 
-                      <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-                        <span>{rx.item_count} item obat</span>
-                        <span className="font-medium text-slate-600">{formatTimeWIB(rx.created_at)}</span>
+                      <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500 font-medium">{rx.item_count} item obat</span>
+                        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded px-2 py-0.5">
+                          <Clock className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span className="font-semibold text-slate-700">{timeAgo(rx.created_at)}</span>
+                          <span className="text-slate-300">·</span>
+                          <span className="font-mono text-slate-500 text-[10px]">{formatTimeWIB(rx.created_at)}</span>
+                        </div>
                       </div>
                     </div>
                   );
@@ -626,7 +632,32 @@ export default function PharmacyPortal({ activeSubTab }) {
             Riwayat Resep Selesai Diserahkan ({completedPrescriptions.length})
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Card View */}
+          <div className="divide-y divide-slate-100 sm:hidden">
+            {completedPrescriptions.map(rx => (
+              <div key={rx.id} className="py-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono font-bold text-xs text-slate-900">{rx.prescription_code}</span>
+                  <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded font-semibold text-[10px] border border-emerald-200">
+                    Diserahkan
+                  </span>
+                </div>
+                <div className="text-xs font-semibold text-slate-800">
+                  {rx.patient_name} <span className="font-mono text-slate-400 font-normal">({rx.medical_record_number})</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                  <span>{rx.doctor_name}</span>
+                  <div className="flex items-center gap-1 font-mono text-[10px] text-slate-600 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded">
+                    <Clock className="w-3 h-3 text-emerald-600" />
+                    <span>{formatDateTimeWIB(rx.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-600">
               <thead className="bg-slate-50 text-slate-800 font-bold uppercase text-[10px] border-y border-slate-200">
                 <tr>

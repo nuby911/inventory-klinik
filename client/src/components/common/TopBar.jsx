@@ -249,10 +249,13 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
       </div>
 
       {/* Hero Context Header */}
-      <div className="px-3 sm:px-6 lg:px-8 py-3 sm:py-5 pb-3.5 sm:pb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="px-3 sm:px-6 lg:px-8 py-2.5 sm:py-5 pb-3 sm:pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3">
           <div>
-            <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-white drop-shadow-xs">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-white/70 mb-0.5 sm:hidden">
+              {info.category}
+            </div>
+            <h1 className="text-base sm:text-2xl font-bold tracking-tight text-white drop-shadow-xs leading-snug">
               {info.title}
             </h1>
 
@@ -267,14 +270,17 @@ export default function TopBar({ activeSubTab, setActiveSubTab, onToggleMobile }
             </div>
           </div>
 
-          {/* Real-time Live Clock (WIB) */}
-          <div className="inline-flex items-center gap-2 self-start sm:self-auto bg-black/20 hover:bg-black/30 border border-white/20 rounded-xl px-2.5 sm:px-3.5 py-1.5 backdrop-blur-md shadow-xs transition">
-            <Clock className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-emerald-400 shrink-0 animate-pulse" />
-            <div className="text-[11px] sm:text-xs font-medium text-white flex items-center gap-1.5 whitespace-nowrap">
-              <span className="hidden sm:inline">{formatDateID(liveTime, 'full')}</span>
-              <span className="inline sm:hidden">{formatDateID(liveTime, 'short')}</span>
-              <span className="text-white/40">·</span>
-              <span className="font-mono text-emerald-300 font-bold tracking-wider">
+          {/* Real-time Live Clock (WIB) - Balanced Full-Width on Mobile, Compact Pill on Desktop */}
+          <div className="flex items-center justify-between sm:justify-start gap-2 bg-black/25 hover:bg-black/35 border border-white/20 rounded-xl px-2.5 sm:px-3.5 py-1.5 backdrop-blur-md shadow-xs transition w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Clock className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-emerald-400 shrink-0 animate-pulse" />
+              <span className="text-[11px] sm:text-xs font-semibold text-white truncate">
+                {formatDateID(liveTime, 'full')}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 pl-2 border-l border-white/20 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping hidden xs:inline-block" />
+              <span className="font-mono text-emerald-300 font-bold text-xs tracking-wider">
                 {formatTimeWIB(liveTime, true)}
               </span>
             </div>
